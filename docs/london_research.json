@@ -1,0 +1,38 @@
+[
+  {
+    "url": "https://tfl.gov.uk/info-for/open-data-users/our-open-data",
+    "status": 403,
+    "bytes": 1512,
+    "snippets": []
+  },
+  {
+    "url": "https://tfl.gov.uk/info-for/open-data-users/unified-api",
+    "status": 403,
+    "bytes": 1512,
+    "snippets": []
+  },
+  {
+    "url": "https://api.tfl.gov.uk/Line/jubilee/Route/Sequence/outbound",
+    "status": 403,
+    "bytes": 1512,
+    "snippets": []
+  },
+  {
+    "url": "https://tfl.gov.uk/corporate/publications-and-reports/underground-services-performance",
+    "status": 403,
+    "bytes": 1512,
+    "snippets": []
+  },
+  {
+    "url": "https://en.wikipedia.org/wiki/Platform_screen_doors",
+    "status": 403,
+    "bytes": 126,
+    "snippets": []
+  },
+  {
+    "url": "https://tfl.gov.uk/corporate/publications-and-reports/rail-usage-figures",
+    "status": 403,
+    "bytes": 1512,
+    "snippets": []
+  }
+]
