@@ -1,0 +1,30 @@
+{
+  "python": "3.13.14",
+  "platform": "Windows-11-10.0.26100-SP0",
+  "results": [
+    {
+      "network": "a_simple",
+      "stations": 6,
+      "seconds": 0.478,
+      "serialize_s": 0.038,
+      "trajectory_MB": 2.52,
+      "passengers": 27263.0
+    },
+    {
+      "network": "e_medium",
+      "stations": 25,
+      "seconds": 4.73,
+      "serialize_s": 0.19,
+      "trajectory_MB": 11.01,
+      "passengers": 117866.0
+    },
+    {
+      "network": "f_star",
+      "stations": 13,
+      "seconds": 1.512,
+      "serialize_s": 0.096,
+      "trajectory_MB": 6.06,
+      "passengers": 59930.0
+    }
+  ]
+}
