@@ -1,0 +1,70 @@
+{
+  "status": "cross_checked_manual_annotation",
+  "source": "user",
+  "jubilee_doors": [
+    "Westminster",
+    "Waterloo",
+    "Southwark",
+    "London Bridge",
+    "Bermondsey",
+    "Canada Water",
+    "Canary Wharf",
+    "North Greenwich"
+  ],
+  "jubilee_extension_without_doors": [
+    "Canning Town",
+    "West Ham",
+    "Stratford"
+  ],
+  "elizabeth_underground_reference": [
+    "Paddington",
+    "Bond Street",
+    "Tottenham Court Road",
+    "Farringdon",
+    "Liverpool Street",
+    "Whitechapel",
+    "Canary Wharf",
+    "Woolwich"
+  ],
+  "sources": [
+    {
+      "id": "tfl_environment",
+      "url": "https://tfl.gov.uk/corporate/transparency/freedom-of-information/foi-request-detail?referenceId=FOI-0284-2627",
+      "checked_on": "2026-11-22",
+      "http_status": 200,
+      "quote": "This modelled wind speed didn’t occur at surface Jubilee Line Extension platforms hence the decision was taken not to equip these stations.",
+      "text_sha256": "b99a9bb60a7c9eb9fb3e8d3511a735cda6f356311eb20e8b76f6fe5d3c295fff"
+    },
+    {
+      "id": "urbanrail",
+      "url": "https://www.urbanrail.net/eu/uk/lon/london.htm",
+      "checked_on": "2026-11-22",
+      "http_status": 200,
+      "quote": "The underground stations along this extension are equipped with platform screen doors.",
+      "text_sha256": "e0ef4e2cb46c4507e83cea7e9ec87fd92fcb8f2b87adff813b9c3021e40a2e17"
+    },
+    {
+      "id": "tfl_bakerloo",
+      "url": "https://tfl.gov.uk/corporate/transparency/freedom-of-information/foi-request-detail?referenceId=FOI-0943-2122",
+      "checked_on": "2026-11-22",
+      "http_status": 200,
+      "quote": "there are no plans to install platform edge doors on Bakerloo line stations.",
+      "text_sha256": "df9c60da7c6cef6f54667ce66bd3f21c764691263c15a3b6c49c7b23cff67427"
+    },
+    {
+      "id": "crossrail",
+      "url": "https://learninglegacy.crossrail.co.uk/documents/engineering-design-platform-edge-screens-crossrails-mined-stations/",
+      "checked_on": "2026-11-22",
+      "http_status": 200,
+      "quote": "They are a specialist mechanical element, common to all sub-surface Crossrail Stations.",
+      "text_sha256": "4a61c4804c8e711a9b6c83ee9cfc60ffde51a13736f671816cd294d14e9d5827"
+    }
+  ],
+  "interpretation": [
+    "Manual station list cross-checked against the rule for subsurface stations on the 1999 extension and the saved TfL route topology, not an API door attribute.",
+    "FOI-0284-2627 says 16 stations on the Jubilee Line Extension. That count conflicts with the 11-station extension: it is not used as a station count or as evidence of doors at surface stations. Eight equipped stations have sixteen directional platforms.",
+    "All eight equipped Jubilee stations are in this demo. Green Park predates the 1999 extension. Surface Canning Town, West Ham and Stratford are outside the selected subset.",
+    "Crossrail paper confirms doors at all subsurface Crossrail stations and explicitly names its five mined stations. The other underground box stations are Paddington, Canary Wharf and Woolwich; Custom House and Abbey Wood are surface stations. The reference list is documentation only; Elizabeth is not added to the simulation.",
+    "Waterloo is shared by Jubilee and Bakerloo. The station-level flag necessarily adds dwell time to Bakerloo too; FOI-0943-2122 confirms this is a model approximation, not the physical situation."
+  ]
+}

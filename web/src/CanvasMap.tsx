@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Network, Trajectory } from "./model";
 import { value } from "./model";
+import { before, queueIndex, queueAt } from "./replay";
 type Props = {
   network: Network;
   trajectory: Trajectory | null;
@@ -13,16 +14,6 @@ type Props = {
   selected: string | null;
   heat: string;
 };
-function before(items: any[], time: number, field: string) {
-  let low = 0,
-    high = items.length;
-  while (low < high) {
-    const mid = (low + high) >>> 1;
-    if (items[mid][field] <= time) low = mid + 1;
-    else high = mid;
-  }
-  return low - 1;
-}
 export default function CanvasMap(props: Props) {
   const canvas = useRef<HTMLCanvasElement>(null),
     host = useRef<HTMLDivElement>(null),
@@ -40,12 +31,7 @@ export default function CanvasMap(props: Props) {
           trains.set(item.train, { trips: [], stops: [] });
         trains.get(item.train)![kind].push(item);
       }
-    const queues = new Map<string, any[]>();
-    for (const item of props.trajectory?.queue_events ?? []) {
-      const q = queues.get(item.station) ?? [];
-      q.push({ time: item.time, value: (q.at(-1)?.value ?? 0) + item.delta });
-      queues.set(item.station, q);
-    }
+    const queues = queueIndex(props.trajectory).stations;
     return { trains, queues };
   }, [props.trajectory]);
   const indexRef = useRef(indexed);
@@ -187,7 +173,7 @@ export default function CanvasMap(props: Props) {
           type: "station",
           name: s.name,
           id: s.id,
-          waiting: Math.max(0, q[before(q, clock.time, "time")]?.value ?? 0),
+          waiting: queueAt(q, clock.time),
         });
       }
       if (p.trajectory && !p.editing)

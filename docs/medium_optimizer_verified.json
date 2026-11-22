@@ -1,0 +1,156 @@
+{
+  "network": "synthetic/e_medium.json",
+  "python": "3.13.14",
+  "platform": "Windows-11-10.0.26100-SP0",
+  "settings": {
+    "headway_min_s": 60,
+    "headway_max_s": 1200,
+    "headway_step_s": 15,
+    "population": 40,
+    "generations": 30,
+    "time_budget_s": 60,
+    "evaluation_budget": 20,
+    "seeds_search": 3,
+    "seeds_final": 5,
+    "weights_a": {
+      "wait": 1,
+      "denied": 120,
+      "queue": 30
+    },
+    "weights_b": {
+      "empty": 0.7,
+      "fleet": 0.3
+    }
+  },
+  "day_start_s": 18000.0,
+  "day_end_s": 90000.0,
+  "runs": [
+    {
+      "seconds": 46.754753499997605,
+      "result_sha256": "e42b5bebe963e6c9ecfef6dbbcb0d0a370cea6d0106375f50ffa9209410a06f7",
+      "stop_reason": "evaluation_budget",
+      "reproducible": true,
+      "generations_completed": 1,
+      "evaluations": 95,
+      "front_points": 14,
+      "options": [
+        {
+          "name": "Минимум ожидания",
+          "f_A": 133.509434003134,
+          "f_B": 0.8155192803121614,
+          "W": 126.95232587325827,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        },
+        {
+          "name": "Минимум пустых поездов",
+          "f_A": 926.7619317985893,
+          "f_B": 0.7087367430406702,
+          "W": 896.1992449060232,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        },
+        {
+          "name": "Сбалансированный",
+          "f_A": 202.36731846919483,
+          "f_B": 0.8086208859407144,
+          "W": 184.6702814500178,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        },
+        {
+          "name": "Мой вариант",
+          "f_A": 133.509434003134,
+          "f_B": 0.8155192803121614,
+          "W": 126.95232587325827,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        }
+      ]
+    },
+    {
+      "seconds": 48.58933270000125,
+      "result_sha256": "e42b5bebe963e6c9ecfef6dbbcb0d0a370cea6d0106375f50ffa9209410a06f7",
+      "stop_reason": "evaluation_budget",
+      "reproducible": true,
+      "generations_completed": 1,
+      "evaluations": 95,
+      "front_points": 14,
+      "options": [
+        {
+          "name": "Минимум ожидания",
+          "f_A": 133.509434003134,
+          "f_B": 0.8155192803121614,
+          "W": 126.95232587325827,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        },
+        {
+          "name": "Минимум пустых поездов",
+          "f_A": 926.7619317985893,
+          "f_B": 0.7087367430406702,
+          "W": 896.1992449060232,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        },
+        {
+          "name": "Сбалансированный",
+          "f_A": 202.36731846919483,
+          "f_B": 0.8086208859407144,
+          "W": 184.6702814500178,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        },
+        {
+          "name": "Мой вариант",
+          "f_A": 133.509434003134,
+          "f_B": 0.8155192803121614,
+          "W": 126.95232587325827,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        }
+      ]
+    }
+  ],
+  "identical_results": true
+}

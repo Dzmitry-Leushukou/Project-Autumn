@@ -419,6 +419,9 @@ export default function Controls({
         {field("optimizer.population", "Популяция", { min: 4 })}
         {field("optimizer.generations", "Поколения", { min: 1 })}
         {field("optimizer.time_budget_s", "Бюджет поиска, с", { min: 1 })}
+        {field("optimizer.evaluation_budget", "Максимум оценок расписаний", {
+          min: 4,
+        })}
         {field("optimizer.seeds_search", "Seed при поиске", { min: 1 })}
         {field("optimizer.seeds_final", "Seed итоговой оценки", { min: 1 })}
         {field("optimizer.headway_min_s", "Граница интервала снизу, с", {

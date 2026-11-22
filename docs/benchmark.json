@@ -5,26 +5,58 @@
     {
       "network": "a_simple",
       "stations": 6,
-      "seconds": 0.478,
-      "serialize_s": 0.038,
+      "lines": 1,
+      "fleet": 12,
+      "synthetic": true,
+      "day_start_s": 18000.0,
+      "day_end_s": 90000.0,
+      "seconds": 0.33,
+      "serialize_s": 0.039,
       "trajectory_MB": 2.52,
-      "passengers": 27263.0
+      "passengers": 27263.0,
+      "deadlock": false
     },
     {
       "network": "e_medium",
       "stations": 25,
-      "seconds": 4.73,
-      "serialize_s": 0.19,
-      "trajectory_MB": 11.01,
-      "passengers": 117866.0
+      "lines": 3,
+      "fleet": 60,
+      "synthetic": true,
+      "day_start_s": 18000.0,
+      "day_end_s": 90000.0,
+      "seconds": 2.646,
+      "serialize_s": 0.215,
+      "trajectory_MB": 10.93,
+      "passengers": 117866.0,
+      "deadlock": false
     },
     {
       "network": "f_star",
       "stations": 13,
-      "seconds": 1.512,
-      "serialize_s": 0.096,
-      "trajectory_MB": 6.06,
-      "passengers": 59930.0
+      "lines": 4,
+      "fleet": 32,
+      "synthetic": true,
+      "day_start_s": 18000.0,
+      "day_end_s": 90000.0,
+      "seconds": 0.948,
+      "serialize_s": 0.107,
+      "trajectory_MB": 6.05,
+      "passengers": 59930.0,
+      "deadlock": false
+    },
+    {
+      "network": "benchmark_large",
+      "stations": 49,
+      "lines": 4,
+      "fleet": 120,
+      "synthetic": true,
+      "day_start_s": 18000.0,
+      "day_end_s": 90000.0,
+      "seconds": 22.61,
+      "serialize_s": 0.368,
+      "trajectory_MB": 21.62,
+      "passengers": 230868.0,
+      "deadlock": false
     }
   ]
 }

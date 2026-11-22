@@ -63,6 +63,7 @@ export const defaults: any = {
     population: 40,
     generations: 30,
     time_budget_s: 60,
+    evaluation_budget: 20,
     seeds_search: 3,
     seeds_final: 5,
     weights_a: { wait: 1, denied: 120, queue: 30 },

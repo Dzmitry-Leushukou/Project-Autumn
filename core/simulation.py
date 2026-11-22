@@ -98,6 +98,12 @@ class Simulator:
         self.active_intervals = defaultdict(list)
         self.blocked_since = {}
         self.blocking = defaultdict(float)
+        self.period_factors = defaultdict(lambda: defaultdict(float))
+        self.shared_stations = {
+            s
+            for s in self.stations
+            if len([l for l in network.lines if s in l.stations]) > 1
+        }
         self.peak_active = 0
         self.deadlock = False
         self.last_departure = self.start
@@ -201,6 +207,16 @@ class Simulator:
             self.blocking[resource] += max(
                 0, min(self.now, self.end) - max(self.start, since)
             )
+            period_s = self.network.schedule.period_len_min * 60
+            cursor, end = max(self.start, since), min(self.now, self.end)
+            while cursor < end:
+                p = int((cursor - self.start) // period_s)
+                boundary = min(end, self.start + (p + 1) * period_s)
+                factors = self.period_factors[(self.train_lines[tid], p)]
+                factors["blocking_s"] += boundary - cursor
+                if resource[1] in self.shared_stations:
+                    factors["shared_blocking_s"] += boundary - cursor
+                cursor = boundary
 
     def _dispatch(self, key):
         self.dispatch_pending.discard(key)
@@ -272,6 +288,14 @@ class Simulator:
         )
         off, on, delay = self._exchange(tid, station, retire)
         duration = base_dwell(station) + (off + on) / station.boarding_rate_pps + delay
+        if self.now < self.end:
+            p = int(
+                (self.now - self.start) // (self.network.schedule.period_len_min * 60)
+            )
+            factors = self.period_factors[(line.id, p)]
+            factors["boarding_s"] += (off + on) / station.boarding_rate_pps
+            factors["random_delay_s"] += delay
+            factors["passenger_exchange"] += off + on
         row["ready"] = self.now + duration
         stop = {
             "train": tid,
@@ -367,12 +391,13 @@ class Simulator:
         self.groups = GroupStore()
         self.queues = {s: [] for s in self.stations}
         self.queued_index = {}
+        self.queued_time = None
         self.onboard = [{} for _ in self.train_lines]
         self.station_index = {s: i for i, s in enumerate(self.stations)}
         self.ride_codes = {}
         self.ride_pairs = [(-1, 0)]
         self.ride_targets = np.full(4096, -1, dtype=np.int32)
-        self.ride_allowed = {l: np.zeros(4096, dtype=bool) for l in self.lines}
+        self.ride_allowed = {key: np.zeros(4096, dtype=bool) for key in self.routes}
         self.waiting = {s: 0.0 for s in self.stations}
         self.peak_queues = {s: 0.0 for s in self.stations}
         self.appeared = 0.0
@@ -387,6 +412,7 @@ class Simulator:
         self.od_rows = defaultdict(list)
         self.od_distributions = {}
         self.generation_plans = {}
+        self.station_plans = {}
         self.boarding_denied = defaultdict(float)
         self.boarding_eligible = defaultdict(float)
         self.trip_totals = defaultdict(lambda: [0.0, 0])
@@ -423,6 +449,9 @@ class Simulator:
                 )
             return
         key = (station, route, leg_index, self.now)
+        if self.queued_time != self.now:
+            self.queued_time = self.now
+            self.queued_index.clear()
         existing = self.queued_index.get(key)
         if existing is not None and self.groups.values[existing]["size"] > 1e-9:
             self.groups.values[existing]["size"] += size
@@ -454,7 +483,13 @@ class Simulator:
                 ride = self.route_registry[route].legs[leg]
                 self.ride_targets[code] = self.station_index[ride.path[-1]]
                 for line in ride.lines:
-                    self.ride_allowed[line][code] = True
+                    for direction in (1, -1):
+                        path = self.routes[(line, direction)]
+                        start = path.index(ride.path[0])
+                        extended = path + path if self.lines[line].is_loop else path
+                        self.ride_allowed[(line, direction)][code] = (
+                            tuple(extended[start : start + len(ride.path)]) == ride.path
+                        )
         return self.ride_codes[key]
 
     def _queue_change(self, station, delta):
@@ -514,9 +549,59 @@ class Simulator:
                 dests, probs = self.od_distributions[station]
                 if not dests:
                     self._enqueue(-1, 0, size, station)
-                for destination, prob in zip(dests, probs):
-                    self._generate_pair(station, destination, size * prob, period)
+                else:
+                    self._generate_station(station, dests, probs, size, period)
         self.push(self.now + settings.group_step_s, "generate")
+
+    def _generate_station(self, station, destinations, probabilities, size, period):
+        key = (station, period)
+        if key not in self.station_plans:
+            routes, dest_probs, route_probs, rides = [], [], [], []
+            for destination, dp in zip(destinations, probabilities):
+                candidates = self.router.candidates(station, destination)
+                rp = self.router.probabilities(station, destination, period)
+                for route, probability in zip(candidates, rp):
+                    if route not in self.route_ids:
+                        self.route_ids[route] = len(self.route_registry)
+                        self.route_registry.append(route)
+                    rid = self.route_ids[route]
+                    routes.append(rid)
+                    dest_probs.append(dp)
+                    route_probs.append(probability)
+                    rides.append(
+                        self._ride_code(rid, 0) if route.legs[0].kind == "ride" else 0
+                    )
+            self.station_plans[key] = (
+                np.asarray(routes, dtype=np.int32),
+                np.asarray(dest_probs),
+                np.asarray(route_probs),
+                np.asarray(rides, dtype=np.int32),
+            )
+        routes, dp, rp, rides = self.station_plans[key]
+        sizes = (size * dp) * rp
+        keep = sizes >= 1e-9
+        routes, sizes, rides = routes[keep], sizes[keep], rides[keep]
+        # Walk-first routes keep their ordinary transfer events. Fresh demand
+        # events precede transfers/arrivals, so all newly created FIFO keys are unique.
+        direct = rides != 0
+        for route, count in zip(routes[~direct].tolist(), sizes[~direct].tolist()):
+            self._enqueue(route, 0, count, station)
+        routes, sizes, rides = routes[direct], sizes[direct], rides[direct]
+        if not len(sizes):
+            return
+        indices = self.groups.add_many(routes, self.now, sizes, rides)
+        self.queues[station].extend(indices)
+        if self.queued_time != self.now:
+            self.queued_time = self.now
+            self.queued_index.clear()
+        for route, index in zip(routes.tolist(), indices):
+            self.queued_index[(station, route, 0, self.now)] = index
+        added = float(sizes.sum())
+        self.waiting[station] += added
+        self._queue_change(station, added)
+        self.peak_queues[station] = max(
+            self.peak_queues[station], self.waiting[station]
+        )
 
     def _generate_pair(self, origin, destination, size, period):
         if size < 1e-9:
@@ -575,19 +660,12 @@ class Simulator:
                 free = max(
                     0, self.network.train.capacity - float(self.state[tid]["load"])
                 )
-                path = self.train_paths[tid]
-                pos = int(self.state[tid]["pos"])
-                ahead = (
-                    path[pos + 1 :] + path[:pos]
-                    if self.lines[line_id].is_loop
-                    else path[pos + 1 :]
-                )
                 ids = np.asarray(queue, dtype=np.int64)
                 rows = self.groups.values[ids]
                 rides = rows["ride"]
-                suitable = self.ride_allowed[line_id][rides] & np.isin(
-                    self.ride_targets[rides], [self.station_index[s] for s in ahead]
-                )
+                suitable = self.ride_allowed[
+                    (line_id, int(self.state[tid]["direction"]))
+                ][rides]
                 selected = np.flatnonzero(suitable)
                 sizes = rows["size"][selected]
                 before = np.cumsum(sizes) - sizes
@@ -617,21 +695,13 @@ class Simulator:
                 positive = boarded > 1e-9
                 if positive.any():
                     codes = rides[selected][positive]
-                    unique, inverse = np.unique(codes, return_inverse=True)
-                    totals = np.bincount(inverse, weights=boarded[positive])
-                    for code, size in zip(unique.tolist(), totals.tolist()):
+                    totals = np.bincount(codes, weights=boarded[positive])
+                    unique = np.flatnonzero(totals)
+                    for code, size in zip(unique.tolist(), totals[unique].tolist()):
                         kept[code] = kept.get(code, 0) + size
                 done = remaining <= 1e-9
-                for row in rows[done]:
-                    self.queued_index.pop(
-                        (
-                            station.id,
-                            int(row["route"]),
-                            int(row["leg"]),
-                            float(row["arrived"]),
-                        ),
-                        None,
-                    )
+                # Only cohorts created at the current event time can merge.
+                # Old FIFO keys are discarded on time change, not one by one.
                 self.queues[station.id] = ids[~done].tolist()
                 self.state[tid]["load"] += on
         delays = self.network.settings.delays
@@ -684,8 +754,14 @@ class Simulator:
         assert np.all(self.state["load"] >= -1e-6)
         assert np.all(self.state["load"] <= self.network.train.capacity + 1e-6)
 
-    def run(self):
+    def run(self, should_stop=None):
         while self.events:
+            if (
+                should_stop is not None
+                and self.events_processed % 128 == 0
+                and should_stop()
+            ):
+                raise TimeoutError("Simulation interrupted by its execution deadline")
             self.now, _, tid, _, kind, payload = heapq.heappop(self.events)
             self.events_processed += 1
             if kind == "dispatch":

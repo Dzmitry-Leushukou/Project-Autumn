@@ -106,3 +106,58 @@ def test_zero_service_keeps_demand_and_excludes_routes():
     assert sim.completed == 0
     assert sim.appeared > 0
     assert sum(sim.waiting.values()) == pytest.approx(sim.appeared)
+
+
+def test_ring_boarding_follows_selected_path_not_first_opposite_train():
+    from data_io.schema import OD
+
+    net = small([["A", "B", "C", "D"]], (0,), fleet=2, headway=180)
+    net.lines[0].depot_station = "B"
+    net.settings.demand_noise = False
+    net.settings.delays.p0 = 0
+    net.od_matrix = [
+        OD(origin="A", destination="B", start_min=300, len_min=2, trips=10)
+    ]
+    sim = Simulator(net, check_invariants=True)
+    result = sim.run()
+    assert sim.router.candidates("A", "B")[0].legs[0].path == ("A", "B")
+    visits = [s for s in sim.stops if s["station"] == "A"]
+    first = min(visits, key=lambda s: s["arrival"])
+    assert first["direction"] == -1  # The wrong train really arrives first.
+    assert first["boarded"] == 0
+    boarded = next(s for s in visits if s["boarded"] > 0)
+    assert boarded["direction"] == 1
+    trip = next(
+        t
+        for t in sim.trips
+        if t["train"] == boarded["train"] and t["departure"] == boarded["departure"]
+    )
+    assert (trip["from"], trip["to"]) == ("A", "B")
+    assert result["metrics"]["transported"] == pytest.approx(10)
+
+
+@pytest.mark.parametrize("walking", [False, True])
+def test_batched_generation_preserves_fifo_and_conservation(walking):
+    class ScalarGeneration(Simulator):
+        def _generate_station(self, station, destinations, probabilities, size, period):
+            for destination, probability in zip(destinations, probabilities):
+                self._generate_pair(station, destination, size * probability, period)
+
+    paths = [["A", "B"], ["C", "D"]] if walking else [["A", "X", "B"], ["C", "X", "D"]]
+    doc = build("Batch regression", paths, duration=900)
+    if walking:
+        doc["transfers"] = [{"from": "B", "to": "C", "walk_time_s": 90}]
+    net = require_network(doc)
+    net.train.capacity = 20
+    net.settings.demand_noise = False
+    net.settings.delays.p0 = 0
+    a = Simulator(net, check_invariants=True).run()
+    b = ScalarGeneration(net, check_invariants=True).run()
+    for key in ("W", "D", "LF", "Qn", "appeared", "transported", "unfinished"):
+        assert a["metrics"][key] == pytest.approx(b["metrics"][key], abs=1e-7)
+    assert a["metrics"]["appeared"] == pytest.approx(
+        a["metrics"]["transported"]
+        + a["metrics"]["waiting"]
+        + a["metrics"]["riding"]
+        + a["metrics"]["walking"]
+    )

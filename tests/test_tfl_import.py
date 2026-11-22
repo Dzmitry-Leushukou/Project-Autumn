@@ -92,6 +92,27 @@ def test_topology_is_checked_against_api_sequence():
         build_network(routes, extracted)
 
 
+def test_door_annotation_has_cross_checked_sources_and_no_surface_stations():
+    evidence = read_network(SOURCES / "platform_doors_audit.json")
+    assert evidence["status"] == "cross_checked_manual_annotation"
+    assert evidence["source"] == "user"
+    assert len(evidence["jubilee_doors"]) == 8
+    assert not set(evidence["jubilee_extension_without_doors"]) & set(
+        evidence["jubilee_doors"]
+    )
+    assert len(evidence["sources"]) == 4
+    assert all(
+        s["http_status"] == 200 and s["quote"] and len(s["text_sha256"]) == 64
+        for s in evidence["sources"]
+    )
+    routes, extracted = inputs()
+    document, audit = build_network(routes, extracted)
+    assert {s["id"] for s in document["stations"] if s["platform_doors"]} == set(
+        evidence["jubilee_doors"]
+    )
+    assert audit["platform_doors"]["source"] == "user"
+
+
 def test_ooxml_cached_values_preserve_zero_missing_and_columns():
     stream = BytesIO()
     with ZipFile(stream, "w") as z:

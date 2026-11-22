@@ -171,3 +171,101 @@ test("London TfL data loads in one action and compares options", async ({
   });
   expect(errors).toEqual([]);
 });
+
+test("queue panel and station tooltip agree between minute samples and after rewind", async ({
+  page,
+}) => {
+  const network = {
+    meta: {
+      name: "Queue regression",
+      synthetic: true,
+      format_version: "1.0",
+      description: "Synthetic",
+    },
+    stations: [
+      { id: "A", name: "Alpha", x: 200, y: 500 },
+      { id: "B", name: "Beta", x: 800, y: 500 },
+    ],
+    lines: [
+      {
+        id: "L1",
+        name: "Line",
+        color: "#397DAD",
+        is_loop: false,
+        stations: ["A", "B"],
+      },
+    ],
+    segments: [{ from: "A", to: "B", run_time_s: 55 }],
+    transfers: [],
+    train: { capacity: 100 },
+    fleet: 2,
+    demand: [],
+    settings: { day_start_s: 18000, day_end_s: 18600 },
+  };
+  const trajectory = {
+    meta: { day_start_s: 18000, day_end_s: 18600, simulation_end_s: 18600 },
+    trips: [],
+    stops: [],
+    series: [
+      { time: 18000, waiting: { A: 10 } },
+      { time: 18060, waiting: { A: 10 } },
+      { time: 18120, waiting: { A: 0 } },
+    ],
+    queue_events: [
+      { time: 18000, station: "A", delta: 10 },
+      { time: 18075, station: "A", delta: -10 },
+    ],
+  };
+  await page.route("**/api/networks/b_transfer", (route) =>
+    route.fulfill({ json: network }),
+  );
+  await page.route("**/api/simulate", (route) =>
+    route.fulfill({
+      json: {
+        run_id: "queue-repro",
+        deadlock: false,
+        validation: { errors: [] },
+        metrics: {
+          W: 0,
+          LF: 0,
+          transported: 10,
+          unfinished: 0,
+          used_trains: 2,
+          release_delay_s: 0,
+          waiting: 0,
+        },
+      },
+    }),
+  );
+  await page.route("**/api/runs/queue-repro/trajectory", (route) =>
+    route.fulfill({ json: trajectory }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "▶ Запустить симуляцию" }).click();
+  await expect(page.locator("div[role=status]")).toContainText("Прогон готов");
+  await page.getByLabel("Пауза", { exact: true }).click();
+  const waiting = page
+    .locator(".metric")
+    .filter({ hasText: "Ожидают" })
+    .locator("b");
+  const canvas = page.getByLabel("Карта сети метро");
+  const box = (await canvas.boundingBox())!;
+  const scale = Math.min((box.width - 120) / 1000, (box.height - 100) / 1000);
+  const position = {
+    x: (box.width - 1000 * scale) / 2 + 200 * scale,
+    y: box.height / 2,
+  };
+  for (const [time, expected] of [
+    [18100, 0],
+    [18070, 10],
+    [18100, 0],
+  ]) {
+    await page.getByLabel("Время симуляции").fill(String(time));
+    await expect(waiting).toHaveText(String(expected));
+    await canvas.hover({ position });
+    await expect(page.locator(".map-tooltip")).toContainText(
+      `Ожидают ${expected.toFixed(1)}`,
+    );
+    await canvas.hover({ position: { x: 10, y: 10 } });
+  }
+});

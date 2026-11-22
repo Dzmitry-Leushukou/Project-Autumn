@@ -1,5 +1,23 @@
 {
-  "http_trajectory_s": 0.020871699998679105,
-  "bytes": 11007441,
-  "compute_s": 4.723087999998825
+  "network": "e_medium",
+  "health": {
+    "status": "ok"
+  },
+  "simulate_compute_s": 2.8229343999992125,
+  "trajectory_seconds": 0.01708189999772003,
+  "trajectory_bytes": 10930027,
+  "train_count_diagnostics": {
+    "headway_s": 180,
+    "trains": 3,
+    "deadlock": false,
+    "boarding_s": 0.0,
+    "random_delay_s": 0.0,
+    "blocking_s": 0.0,
+    "shared_blocking_s": 0.0,
+    "passenger_exchange": 0.0,
+    "denied_share": 0.0,
+    "release_delay_s": 4.375,
+    "releases": 8.0
+  },
+  "train_count_explanation": "За выбранный период: посадка/высадка добавила 0.0 поезд-с, обмен пассажиров 0.0; случайные задержки 0.0 поезд-с; блокировки 0.0 поезд-с (на общих станциях/участках 0.0). Средняя задержка выпуска 4.4 с, предел 18.0 с; отказы 0.0000, предел 0.0200. Формула исключает эти добавки; симуляция измеряет их при текущем спросе. Доступный парк 4; остальные депо не менялись."
 }

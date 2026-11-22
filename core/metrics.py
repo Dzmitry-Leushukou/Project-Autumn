@@ -71,6 +71,16 @@ def calculate_metrics(sim):
                     "boarded": boarded,
                     "denied": denied,
                     "releases": sum(r["releases"] for r in rel),
+                    **{
+                        name: sim.period_factors[key][name]
+                        for name in (
+                            "boarding_s",
+                            "random_delay_s",
+                            "blocking_s",
+                            "shared_blocking_s",
+                            "passenger_exchange",
+                        )
+                    },
                 }
             )
     duration = sim.end - sim.start

@@ -5,7 +5,7 @@ from time import perf_counter
 import numpy as np
 from core.physics import allocate_fleet, cycle_time
 from core.randomness import RandomStreams
-from .evaluation import Evaluator, Cancelled
+from .evaluation import Evaluator, Cancelled, DeadlineExceeded
 from .objectives import fronts, crowding, select, four_options
 
 
@@ -25,7 +25,9 @@ def optimize(
     high = opt.headway_max_s // opt.headway_step_s
     assignment = allocate_fleet(network)
     start = perf_counter()
-    evaluator = Evaluator(network, workers, cancelled)
+    evaluator = Evaluator(
+        network, workers, cancelled, deadline=start + opt.time_budget_s
+    )
     search_seeds = [network.settings.seed + i for i in range(opt.seeds_search)]
     final_seeds = [network.settings.seed + i for i in range(opt.seeds_final)]
 
@@ -93,80 +95,83 @@ def optimize(
         genomes.append(mutate(current if len(genomes) % 2 else formula))
     completed = 0
     stop_reason = "generations"
+    budget = min(opt.evaluation_budget, opt.population * (opt.generations + 1))
+    initial_count = (
+        min(opt.population, max(4, budget // 2))
+        if budget < 2 * opt.population
+        else opt.population
+    )
+    submitted = []
+    baseline = decode(baseline_genome)
+    baseline_point = None
+    evaluated = 0
+
+    def score(batch):
+        nonlocal evaluated
+        candidates = [decode(g) for g in batch]
+        submitted.extend(c for c in candidates if c not in submitted)
+        # Complete final seeds immediately, so a deadline never starts a costly
+        # unbounded final phase and never labels search-only scores as final.
+        evaluator.many(candidates, sorted(set(search_seeds + final_seeds)))
+        evaluated += len(batch)
+        progress(min(0.95, evaluated / budget))
+        return evaluator.cached(candidates, search_seeds)
+
     try:
-        points = []
-        evaluated_genomes = []
-        # Budget is checked between small complete batches, including the initial
-        # population: a large initial population must not monopolize the budget.
-        for offset in range(0, len(genomes), 4):
-            batch = genomes[offset : offset + 4]
-            points.extend(evaluator.many([decode(g) for g in batch], search_seeds))
-            evaluated_genomes.extend(batch)
-            if perf_counter() - start >= opt.time_budget_s * 0.35:
-                stop_reason = "time_budget"
-                break
-        genomes = evaluated_genomes
-        progress(0.15)
-        for generation in range(opt.generations):
-            if cancelled():
-                raise Cancelled()
-            # Reserve time for final multi-seed evaluation rather than returning
-            # search-only scores under final labels.
-            if perf_counter() - start >= opt.time_budget_s * 0.55:
-                stop_reason = "time_budget"
-                break
-            values = [(p["f_A"], p["f_B"]) for p in points]
-            ranks, distances = {}, {}
-            for rank, front in enumerate(fronts(values)):
-                ranks.update({i: rank for i in front})
-                distances.update(crowding(front, values))
-
-            def tournament():
-                a, b = rng.integers(len(genomes), size=2)
-                return min((int(a), int(b)), key=lambda i: (ranks[i], -distances[i], i))
-
-            children = []
-            while len(children) < opt.population:
-                a, b = genomes[tournament()], genomes[tournament()]
-                mask = rng.random(len(line_ids)) < 0.5
-                h = np.where(mask[:, None], a[0], b[0])
-                alloc = np.where(mask, a[1], b[1])
-                children.append(mutate((h, alloc)))
-            child_points = []
-            evaluated_children = []
-            for offset in range(0, len(children), 4):
-                batch = children[offset : offset + 4]
-                child_points.extend(
-                    evaluator.many([decode(g) for g in batch], search_seeds)
-                )
-                evaluated_children.extend(batch)
-                if perf_counter() - start >= opt.time_budget_s * 0.55:
-                    stop_reason = "time_budget"
+        try:
+            submitted.append(baseline)
+            baseline_point = evaluator.many([baseline], final_seeds)[0]
+            points = []
+            initial = genomes[:initial_count]
+            for offset in range(0, len(initial), 4):
+                points.extend(score(initial[offset : offset + 4]))
+            genomes = initial
+            for generation in range(opt.generations):
+                if evaluated >= budget:
+                    stop_reason = "evaluation_budget"
                     break
-            children = evaluated_children
-            all_points = points + child_points
-            all_genomes = genomes + children
-            indices = select(
-                list(range(len(all_points))),
-                [(p["f_A"], p["f_B"]) for p in all_points],
-                opt.population,
+                evaluator.check_stop()
+                values = [(p["f_A"], p["f_B"]) for p in points]
+                ranks, distances = {}, {}
+                for rank, front in enumerate(fronts(values)):
+                    ranks.update({i: rank for i in front})
+                    distances.update(crowding(front, values))
+
+                def tournament():
+                    a, b = rng.integers(len(genomes), size=2)
+                    return min(
+                        (int(a), int(b)), key=lambda i: (ranks[i], -distances[i], i)
+                    )
+
+                children = []
+                while len(children) < min(opt.population, budget - evaluated):
+                    a, b = genomes[tournament()], genomes[tournament()]
+                    mask = rng.random(len(line_ids)) < 0.5
+                    h = np.where(mask[:, None], a[0], b[0])
+                    alloc = np.where(mask, a[1], b[1])
+                    children.append(mutate((h, alloc)))
+                child_points = []
+                for offset in range(0, len(children), 4):
+                    child_points.extend(score(children[offset : offset + 4]))
+                all_points, all_genomes = points + child_points, genomes + children
+                indices = select(
+                    list(range(len(all_points))),
+                    [(p["f_A"], p["f_B"]) for p in all_points],
+                    opt.population,
+                )
+                points = [all_points[i] for i in indices]
+                genomes = [all_genomes[i] for i in indices]
+                completed += 1
+            if evaluated >= budget and completed < opt.generations:
+                stop_reason = "evaluation_budget"
+        except DeadlineExceeded:
+            stop_reason = "time_budget"
+        if baseline_point is None:
+            raise DeadlineExceeded(
+                "Бюджета не хватило даже на оценку исходного расписания; увеличьте время поиска."
             )
-            points = [all_points[i] for i in indices]
-            genomes = [all_genomes[i] for i in indices]
-            completed += 1
-            progress(0.15 + 0.55 * (generation + 1) / opt.generations)
-        # Re-evaluate the complete nondominated archive plus the exact baseline.
-        nondominated = fronts([(p["f_A"], p["f_B"]) for p in points])[0]
-        final_candidates = []
-        for i in nondominated:
-            candidate = decode(genomes[i])
-            if points[i]["feasible"] and candidate not in final_candidates:
-                final_candidates.append(candidate)
-        baseline = decode(baseline_genome)
-        if baseline not in final_candidates:
-            final_candidates.append(baseline)
-        final = evaluator.many(final_candidates, final_seeds)
-        baseline_point = final[final_candidates.index(baseline)]
+        final_candidates = [c for c in submitted if evaluator.complete(c, final_seeds)]
+        final = evaluator.cached(final_candidates, final_seeds)
         # Only repaired in-bounds candidates may enter the optimization front.
         eligible = [
             p
@@ -189,6 +194,11 @@ def optimize(
             "seed": network.settings.seed,
             "od_source": "data" if network.od_matrix is not None else "model",
             "evaluations": len(evaluator.cache),
+            "evaluation_budget": opt.evaluation_budget,
+            "reproducible": stop_reason != "time_budget",
+            "evaluated_candidates": [
+                {"headways": h, "fleet_assignment": a} for h, a in final_candidates
+            ],
         }
     finally:
         evaluator.close()

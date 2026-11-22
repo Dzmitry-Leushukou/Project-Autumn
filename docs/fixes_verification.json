@@ -1,0 +1,67 @@
+{
+  "date": "2026-11-22",
+  "base_commit": "c10c2282935b12d985122c43a7fd1a80280e6655",
+  "application_files": 68,
+  "application_sha256": "3ddfdb9db7f8d86f781be7f20b034984d160613ddb661852cf66adc2c50c8fff",
+  "clean_snapshot_matches_application": true,
+  "windows_tests": {
+    "python": "3.13.14",
+    "passed": 69,
+    "seconds": 10.06,
+    "warnings": 1
+  },
+  "linux_tests": [
+    {
+      "python": "3.11.15",
+      "passed": 69,
+      "seconds": 10.09,
+      "warnings": 1
+    },
+    {
+      "python": "3.12.3",
+      "passed": 69,
+      "seconds": 10.18,
+      "warnings": 1
+    }
+  ],
+  "build": "passed",
+  "browser_tests": {
+    "passed": 5,
+    "seconds": 41.3,
+    "fresh_servers": true,
+    "ports": [
+      15175,
+      18012
+    ]
+  },
+  "animation": {
+    "median_frame_ms": 16.699999999999818,
+    "p95_frame_ms": 16.700000000000728,
+    "samples": 120
+  },
+  "clean_installation": {
+    "command": "py -3.13 scripts/setup.py",
+    "exit_code": 0,
+    "build": "passed",
+    "source_matches_application": true,
+    "pytest": {
+      "passed": 69,
+      "seconds": 15.31,
+      "warnings": 1
+    },
+    "health": {
+      "status": "ok"
+    },
+    "frontend_status": 200,
+    "test_servers_stopped": true
+  },
+  "active_api_updated": true,
+  "remote_ci_run": false,
+  "performance_artifacts": [
+    "benchmark.json",
+    "medium_optimizer_verified.json",
+    "london_optimizer_verified.json",
+    "london_simulation_verified.json",
+    "api_benchmark.json"
+  ]
+}

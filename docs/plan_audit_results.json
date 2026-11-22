@@ -1,0 +1,234 @@
+{
+  "commit": "c10c2282935b12d985122c43a7fd1a80280e6655",
+  "python": "3.13.14",
+  "platform": "Windows-11-10.0.26100-SP0",
+  "cpu_count": 16,
+  "ring_direction": {
+    "expected_path": [
+      "A",
+      "B"
+    ],
+    "boarding": {
+      "train": 1,
+      "line": "L1",
+      "direction": -1,
+      "station": "A",
+      "arrival": 18075.0,
+      "departure": 18096.666666666668,
+      "alighted": 0.0,
+      "boarded": 10.0,
+      "load": 10.0,
+      "delay_s": 0.0,
+      "retire": false
+    },
+    "actual_next_trip": {
+      "train": 1,
+      "line": "L1",
+      "direction": -1,
+      "from": "A",
+      "to": "D",
+      "departure": 18096.666666666668,
+      "ready": 18156.666666666668,
+      "arrival": 18156.666666666668,
+      "load": 10.0
+    },
+    "transported": 10.0
+  },
+  "unaveraged_metrics": {
+    "station": "A",
+    "samples": [
+      0.0125,
+      0.01625
+    ],
+    "returned": 0.0125,
+    "expected_mean": 0.014375,
+    "mean_W_correct": true
+  },
+  "simulations": [
+    {
+      "network": "a_simple",
+      "stations": 6,
+      "lines": 1,
+      "fleet": 12,
+      "simulation_s": 0.5386736000000383,
+      "serialization_s": 0.03906239999923855,
+      "trajectory_bytes": 2518644,
+      "appeared": 27263.0,
+      "deadlock": false,
+      "day_start_s": 18000.0,
+      "day_end_s": 90000.0
+    },
+    {
+      "network": "e_medium",
+      "stations": 25,
+      "lines": 3,
+      "fleet": 60,
+      "simulation_s": 4.735372599992843,
+      "serialization_s": 0.1913776000001235,
+      "trajectory_bytes": 11007493,
+      "appeared": 117866.0,
+      "deadlock": false,
+      "day_start_s": 18000.0,
+      "day_end_s": 90000.0
+    },
+    {
+      "network": "f_star",
+      "stations": 13,
+      "lines": 4,
+      "fleet": 32,
+      "simulation_s": 1.5417833000028622,
+      "serialization_s": 0.09801179999340093,
+      "trajectory_bytes": 6062341,
+      "appeared": 59930.0,
+      "deadlock": false,
+      "day_start_s": 18000.0,
+      "day_end_s": 90000.0
+    },
+    {
+      "network": "london_subset",
+      "stations": 14,
+      "lines": 2,
+      "fleet": 32,
+      "simulation_s": 1.4548972999982652,
+      "serialization_s": 0.09766210000088904,
+      "trajectory_bytes": 5439205,
+      "appeared": 573576.0,
+      "deadlock": false,
+      "day_start_s": 18000.0,
+      "day_end_s": 90000.0
+    }
+  ],
+  "medium_optimization": {
+    "seconds": 45.9825439999986,
+    "settings": {
+      "headway_min_s": 60,
+      "headway_max_s": 1200,
+      "headway_step_s": 15,
+      "population": 40,
+      "generations": 30,
+      "time_budget_s": 60,
+      "seeds_search": 3,
+      "seeds_final": 5,
+      "weights_a": {
+        "wait": 1,
+        "denied": 120,
+        "queue": 30
+      },
+      "weights_b": {
+        "empty": 0.7,
+        "fleet": 0.3
+      }
+    },
+    "generations_completed": 1,
+    "stop_reason": "time_budget",
+    "evaluations": 61,
+    "front_points": 8,
+    "options": [
+      {
+        "name": "Минимум ожидания",
+        "f_A": 133.50943400313403,
+        "f_B": 0.8155192803121614,
+        "W": 126.95232587325827,
+        "seeds": [
+          42,
+          43,
+          44,
+          45,
+          46
+        ]
+      },
+      {
+        "name": "Минимум пустых поездов",
+        "f_A": 926.7619317985894,
+        "f_B": 0.7087367430406702,
+        "W": 896.1992449060232,
+        "seeds": [
+          42,
+          43,
+          44,
+          45,
+          46
+        ]
+      },
+      {
+        "name": "Сбалансированный",
+        "f_A": 159.77758510429948,
+        "f_B": 0.8145528352883821,
+        "W": 144.4874809972867,
+        "seeds": [
+          42,
+          43,
+          44,
+          45,
+          46
+        ]
+      },
+      {
+        "name": "Мой вариант",
+        "f_A": 133.50943400313403,
+        "f_B": 0.8155192803121614,
+        "W": 126.95232587325827,
+        "seeds": [
+          42,
+          43,
+          44,
+          45,
+          46
+        ]
+      }
+    ]
+  },
+  "tests": {
+    "pytest": {
+      "passed": 57,
+      "seconds": 7.55,
+      "warnings": 1
+    },
+    "frontend_build": "passed",
+    "playwright": {
+      "passed": 4,
+      "seconds": 36.5,
+      "search_population": 4,
+      "search_generations": 1,
+      "search_seeds": 1
+    },
+    "animation": {
+      "median_frame_ms": 16.69999999999891,
+      "p95_frame_ms": 16.799999999999272,
+      "samples": 120
+    }
+  },
+  "queue_panel": {
+    "selected_time": 18100,
+    "panel_sample_time": 18060,
+    "panel_waiting": 10.0,
+    "exact_trajectory_waiting": 0.0,
+    "method": "App.tsx minute series indexing versus trajectory queue_events; same ring fixture as ring_direction"
+  },
+  "clean_installation": {
+    "installation_command": "py -3.13 scripts/setup.py",
+    "installation_exit": 0,
+    "build": "passed",
+    "health": {
+      "status": "ok"
+    },
+    "frontend_status": 200,
+    "medium_simulate_compute_seconds": 6.19923469999776,
+    "trajectory_http_s": 0.018398899999738205,
+    "trajectory_bytes": 11007441,
+    "servers_stopped": true,
+    "pytest": {
+      "passed": 57,
+      "seconds": 13.62,
+      "warnings": 1
+    },
+    "http_simulation_parallel_with_other_checks": true,
+    "cleanup": {
+      "status": "rejected_by_policy",
+      "reason": "blocked by policy",
+      "retained_directory": ".verification/plan_audit_clean_20261122",
+      "retained_archive": ".verification/plan_audit_head_20261122.zip",
+      "git_ignored": true
+    }
+  }
+}

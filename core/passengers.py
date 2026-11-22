@@ -25,3 +25,20 @@ class GroupStore:
         self.values[idx] = (route, leg, arrived, size, ride)
         self.count += 1
         return idx
+
+    def add_many(self, routes, arrived, sizes, rides):
+        count = len(sizes)
+        end = self.count + count
+        if end > len(self.values):
+            expanded = np.empty(max(end, len(self.values) * 2), dtype=GROUP_DTYPE)
+            expanded[: self.count] = self.values[: self.count]
+            self.values = expanded
+        rows = self.values[self.count : end]
+        rows["route"] = routes
+        rows["leg"] = 0
+        rows["arrived"] = arrived
+        rows["size"] = sizes
+        rows["ride"] = rides
+        indices = list(range(self.count, end))
+        self.count = end
+        return indices

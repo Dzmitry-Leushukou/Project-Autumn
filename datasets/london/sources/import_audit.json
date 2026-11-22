@@ -406,12 +406,32 @@
       ]
     }
   },
+  "platform_doors": {
+    "status": "cross_checked_manual_annotation",
+    "source": "user",
+    "stations": [
+      "Bermondsey",
+      "Canada Water",
+      "Canary Wharf",
+      "London Bridge",
+      "North Greenwich",
+      "Southwark",
+      "Waterloo",
+      "Westminster"
+    ],
+    "sources": [
+      "https://tfl.gov.uk/corporate/transparency/freedom-of-information/foi-request-detail?referenceId=FOI-0284-2627",
+      "https://www.urbanrail.net/eu/uk/lon/london.htm",
+      "https://tfl.gov.uk/corporate/transparency/freedom-of-information/foi-request-detail?referenceId=FOI-0943-2122",
+      "https://learninglegacy.crossrail.co.uk/documents/engineering-design-platform-edge-screens-crossrails-mined-stations/"
+    ]
+  },
   "limitations": [
     "Typical day, not a specific date; 2025 demand combined with 2026 API topology",
     "Station entries include all LU lines at each station; subset-only destination model changes real distribution",
     "Straight-line interstation distances are estimates, not measured tunnel lengths",
     "Hourly headways average differing directions/links; model has one headway for both directions",
-    "Platform doors manually annotated and not verified by an authoritative accessible source; Waterloo flag also applies to Bakerloo",
+    "Platform doors manually cross-checked against TfL/UrbanRail; source=user, not an API attribute; Waterloo station flag also applies to Bakerloo as a model approximation",
     "Fleet and train parameters are assumptions"
   ]
 }

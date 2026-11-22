@@ -51,7 +51,10 @@ ENTRY_NAMES = {
     "Charing Cross": "Charing Cross LU",
     "Elephant & Castle": "Elephant & Castle LU",
 }
-DOORS = set(JUBILEE[1:])  # Preliminary manual annotation, separately audited.
+DOOR_AUDIT = json.loads(
+    (SOURCES / "platform_doors_audit.json").read_text(encoding="utf-8")
+)
+DOORS = set(DOOR_AUDIT["jubilee_doors"])
 
 
 def column_index(address):
@@ -341,7 +344,7 @@ def build_network(routes, extracted):
         station_totals[name] = {
             "source_row": row["row"],
             "asc": row["asc"],
-            "entries_05_25": sum(included),
+            "entries_05_25": math.fsum(included),
             "entries_24h": row["total_24h"],
         }
     lines, segments, schedule, schedule_audit = [], [], {}, {}
@@ -369,8 +372,10 @@ def build_network(routes, extracted):
         links = [r for r in extracted["frequencies"] if r["line"] == line.title()]
         estimates, evidence = [], []
         for period in range(20):
-            counts = [sum(r["values"][period * 4 : period * 4 + 4]) for r in links]
-            frequency = sum(counts) / len(counts)
+            counts = [
+                math.fsum(r["values"][period * 4 : period * 4 + 4]) for r in links
+            ]
+            frequency = math.fsum(counts) / len(counts)
             if frequency <= 0:
                 raise ValueError(
                     f"No trains for {line} period {period}; cannot silently assume a headway"
@@ -395,7 +400,7 @@ def build_network(routes, extracted):
             "name": "07 · Лондон / TfL NUMBAT 2025 TWT",
             "format_version": "1.0",
             "synthetic": False,
-            "description": "Реальные входы станций NUMBAT 2025, типичный вторник–четверг осени (не конкретная дата). Топология и координаты: сохранённый снимок TfL API. Интервалы оценены по Link_Frequencies, длины — по прямой между координатами. OD модельная; входы всех LU-линий станции направляются только внутри выбранного участка, без уменьшения потока. Парк, тип поезда и физика — допущения; двери — предварительная ручная разметка. Это ограниченная учебная модель, не прогноз TfL. Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016. Geomni UK Map data © and database rights 2019.",
+            "description": "Реальные входы станций NUMBAT 2025, типичный вторник–четверг осени (не конкретная дата). Топология и координаты: сохранённый снимок TfL API. Интервалы оценены по Link_Frequencies, длины — по прямой между координатами. OD модельная; входы всех LU-линий станции направляются только внутри выбранного участка, без уменьшения потока. Парк, тип поезда и физика — допущения; двери — ручная разметка, перепроверенная по TfL и UrbanRail. Станционный флаг Waterloo добавляет двери также Bakerloo — ограничение модели, не физический факт. Это ограниченная учебная модель, не прогноз TfL. Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016. Geomni UK Map data © and database rights 2019.",
         },
         "stations": stations,
         "lines": lines,
@@ -420,14 +425,22 @@ def build_network(routes, extracted):
         "retrieved_utc": extracted.get("retrieved_utc"),
         "stations": points,
         "station_entries": station_totals,
-        "total_entries_05_25": sum(x["entries_05_25"] for x in station_totals.values()),
+        "total_entries_05_25": math.fsum(
+            x["entries_05_25"] for x in station_totals.values()
+        ),
         "schedule": schedule_audit,
+        "platform_doors": {
+            "status": DOOR_AUDIT["status"],
+            "source": "user",
+            "stations": sorted(DOORS),
+            "sources": [s["url"] for s in DOOR_AUDIT["sources"]],
+        },
         "limitations": [
             "Typical day, not a specific date; 2025 demand combined with 2026 API topology",
             "Station entries include all LU lines at each station; subset-only destination model changes real distribution",
             "Straight-line interstation distances are estimates, not measured tunnel lengths",
             "Hourly headways average differing directions/links; model has one headway for both directions",
-            "Platform doors manually annotated and not verified by an authoritative accessible source; Waterloo flag also applies to Bakerloo",
+            "Platform doors manually cross-checked against TfL/UrbanRail; source=user, not an API attribute; Waterloo station flag also applies to Bakerloo as a model approximation",
             "Fleet and train parameters are assumptions",
         ],
     }

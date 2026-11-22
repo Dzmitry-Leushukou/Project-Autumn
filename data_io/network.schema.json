@@ -323,6 +323,19 @@
           "gt": 0,
           "title": "Time Budget S"
         },
+        "evaluation_budget": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 20,
+          "ge": 4,
+          "title": "Evaluation Budget"
+        },
         "seeds_search": {
           "anyOf": [
             {

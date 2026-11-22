@@ -121,7 +121,9 @@ export function Options({
         {result.od_source === "model" ? "OD — модельные" : "OD — данные"} ·{" "}
         {result.stop_reason === "time_budget"
           ? "остановка по бюджету времени"
-          : "завершён заданный поиск"}
+          : result.stop_reason === "evaluation_budget"
+            ? "достигнут максимум оценок"
+            : "завершён заданный поиск"}
       </p>
     </>
   );

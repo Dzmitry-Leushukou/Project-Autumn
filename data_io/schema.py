@@ -140,6 +140,7 @@ class OptimizerSettings(Model):
     population: Annotated[Integer, Field(ge=4, strict=True)] = 40
     generations: PositiveInt = 30
     time_budget_s: Positive = 60
+    evaluation_budget: Annotated[Integer, Field(ge=4, strict=True)] = 20
     seeds_search: PositiveInt = 3
     seeds_final: PositiveInt = 5
     weights_a: WeightsA = Field(default_factory=WeightsA)

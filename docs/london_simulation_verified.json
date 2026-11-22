@@ -1,0 +1,12 @@
+{
+  "network": "07 · Лондон / TfL NUMBAT 2025 TWT",
+  "simulation_s": 0.8374671000055969,
+  "day_start_s": 18000.0,
+  "day_end_s": 90000.0,
+  "appeared": 573576.0,
+  "transported": 573521.7762767354,
+  "unfinished": 54.22372326464392,
+  "deadlock": false,
+  "od_source": "model",
+  "active_api_updated": true
+}

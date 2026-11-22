@@ -1,0 +1,93 @@
+{
+  "network": "london/london_subset.json",
+  "python": "3.13.14",
+  "platform": "Windows-11-10.0.26100-SP0",
+  "settings": {
+    "headway_min_s": 60,
+    "headway_max_s": 1200,
+    "headway_step_s": 15,
+    "population": 40,
+    "generations": 30,
+    "time_budget_s": 60,
+    "evaluation_budget": 20,
+    "seeds_search": 3,
+    "seeds_final": 5,
+    "weights_a": {
+      "wait": 1,
+      "denied": 120,
+      "queue": 30
+    },
+    "weights_b": {
+      "empty": 0.7,
+      "fleet": 0.3
+    }
+  },
+  "day_start_s": 18000.0,
+  "day_end_s": 90000.0,
+  "runs": [
+    {
+      "seconds": 21.80040089999966,
+      "result_sha256": "5e8f6b0fe007b83cf209a336bbb71b3694b7bfee74feff6e11567ff7fd6da0b0",
+      "stop_reason": "evaluation_budget",
+      "reproducible": true,
+      "generations_completed": 1,
+      "evaluations": 105,
+      "front_points": 11,
+      "options": [
+        {
+          "name": "Минимум ожидания",
+          "f_A": 410.15759894237027,
+          "f_B": 0.7775693977976795,
+          "W": 233.49647150722973,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        },
+        {
+          "name": "Минимум пустых поездов",
+          "f_A": 20107.838134485886,
+          "f_B": 0.42044896096961215,
+          "W": 16408.950690189427,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        },
+        {
+          "name": "Сбалансированный",
+          "f_A": 922.5927134338921,
+          "f_B": 0.7409189353166095,
+          "W": 517.6454711497634,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        },
+        {
+          "name": "Мой вариант",
+          "f_A": 746.8081047940065,
+          "f_B": 0.7549689394923382,
+          "W": 398.4895600903092,
+          "seeds": [
+            42,
+            43,
+            44,
+            45,
+            46
+          ]
+        }
+      ]
+    }
+  ],
+  "identical_results": true
+}

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { queueIndex, queueAt } from "./replay";
 import CanvasMap from "./CanvasMap";
 import Controls, { Badge } from "./Controls";
 import { fmt, Options } from "./Results";
@@ -51,6 +52,7 @@ export default function App() {
     jobNetwork = useRef<Network | null>(null);
   clockRef.current.playing = playing;
   clockRef.current.speed = speed;
+  const queues = useMemo(() => queueIndex(trajectory), [trajectory]);
   const setClock = (t: number) => {
     clockRef.current.time = t;
     setTime(t);
@@ -121,9 +123,11 @@ export default function App() {
             if (data.status === "done") {
               setResult(data.result);
               setNotice(
-                data.result.options.length
-                  ? "Четыре варианта готовы. Выберите расписание для сравнения."
-                  : "Допустимых расписаний не найдено. Измените интервалы или парк.",
+                data.result.reproducible === false
+                  ? "Поиск остановлен по времени. Показаны полностью проверенные варианты; для повторяемого поиска увеличьте время или уменьшите максимум оценок."
+                  : data.result.options.length
+                    ? "Четыре варианта готовы. Выберите расписание для сравнения."
+                    : "Допустимых расписаний не найдено. Измените интервалы или парк.",
               );
             }
             if (data.status === "failed") setError(data.error);
@@ -296,16 +300,7 @@ export default function App() {
       {},
     inProgress = job && ["queued", "running"].includes(job.status),
     invalid = report?.errors?.length > 0;
-  const snapshot =
-    trajectory?.series[
-      Math.min(
-        trajectory.series.length - 1,
-        Math.max(0, Math.floor((time - setting(n, "day_start_s")) / 60)),
-      )
-    ];
-  const waiting = snapshot
-    ? Object.values(snapshot.waiting).reduce((a: number, b: any) => a + b, 0)
-    : metrics?.waiting;
+  const waiting = trajectory ? queueAt(queues.total, time) : metrics?.waiting;
   function importJson(file: File) {
     file.text().then((text) => {
       try {
