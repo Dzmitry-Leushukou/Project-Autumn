@@ -4,13 +4,16 @@ import heapq
 import math
 import numpy as np
 from .physics import allocate_fleet, base_dwell, cycle_time, run_time
+from .randomness import RandomStreams, delay_duration
+from .passengers import GroupStore
+from .routing import Router
 
 PRIORITY = {"generate": 0, "transfer": 1, "depart": 2, "arrive": 3, "dispatch": 4, "period": 5, "sample": 6, "watchdog": 7}
 POOL, PLATFORM, TUBE = 0, 1, 2
 
 
 class Simulator:
-    def __init__(self, network, *, passengers=False, record=True, check_invariants=False):
+    def __init__(self, network, *, passengers=True, record=True, check_invariants=False):
         self.network = network
         self.start = network.settings.day_start_s
         self.end = network.settings.day_end_s
@@ -253,19 +256,190 @@ class Simulator:
         self._serve(tid)
 
     def _init_passengers(self):
-        pass
+        self.streams = RandomStreams(self.network.settings.seed)
+        self.groups = GroupStore()
+        self.queues = {s:[] for s in self.stations}
+        self.queued_index = {}
+        self.onboard = [[] for _ in self.train_lines]
+        self.waiting = {s:0.0 for s in self.stations}
+        self.peak_queues = {s:0.0 for s in self.stations}
+        self.appeared = 0.0
+        self.completed = 0.0
+        self.walking = 0.0
+        self.wait_sum = 0.0
+        self.denied = 0.0
+        self.transferred = 0.0
+        self.route_registry = []
+        self.route_ids = {}
+        self.demand_rows = defaultdict(list)
+        self.od_rows = defaultdict(list)
+        self.od_distributions = {}
+        self.generation_plans = {}
+        self.boarding_denied = defaultdict(float)
+        self.boarding_eligible = defaultdict(float)
+        self.trip_totals = defaultdict(lambda:[0.0,0])
+        if self.passengers:
+            self.router = Router(self.network,self.assignment,self.streams)
+            for row in self.network.demand:
+                self.demand_rows[row.station].append(row)
+            for row in self.network.od_matrix or []:
+                self.od_rows[row.origin].append(row)
+            self.push(self.start,"generate")
+
+    def _enqueue(self, route, leg_index, size, station):
+        if size < 1e-9:
+            return
+        legs = self.route_registry[route].legs if route >= 0 else ()
+        if route >= 0 and leg_index >= len(legs):
+            self.completed += size
+            return
+        if route >= 0 and legs[leg_index].kind == "walk":
+            leg = legs[leg_index]
+            self.walking += size
+            self.transferred += size
+            self.push(self.now+leg.walk_s,"transfer",payload=(route,leg_index+1,size,leg.path[-1]))
+            return
+        key = (station,route,leg_index,self.now)
+        existing = self.queued_index.get(key)
+        if existing is not None and self.groups.values[existing]["size"] > 1e-9:
+            self.groups.values[existing]["size"] += size
+        else:
+            group = self.groups.add(route,leg_index,self.now,size)
+            self.queues[station].append(group)
+            self.queued_index[key] = group
+        self.waiting[station] += size
+        self.peak_queues[station] = max(self.peak_queues[station],self.waiting[station])
+
+    def _generate(self):
+        settings = self.network.settings
+        if self.now >= self.end:
+            return
+        step = min(settings.group_step_s,self.end-self.now)
+        period = min(len(next(iter(self.network.schedule.headways.values())))-1,int((self.now-self.start)//(self.network.schedule.period_len_min*60)))
+        for station in self.stations:
+            if self.network.od_matrix is not None:
+                for row in self.od_rows[station]:
+                    if row.start_min*60 <= self.now < (row.start_min+row.len_min)*60:
+                        size = row.trips*step/(row.len_min*60)
+                        if settings.demand_noise:
+                            size = float(self.streams.demand.poisson(size))
+                        self.appeared += size
+                        self._generate_pair(station,row.destination,size,period)
+            else:
+                mean = sum(row.entries*step/(row.len_min*60) for row in self.demand_rows[station] if row.start_min*60 <= self.now < (row.start_min+row.len_min)*60)
+                size = float(self.streams.demand.poisson(mean)) if settings.demand_noise else mean
+                self.appeared += size
+                if size < 1e-9:
+                    continue
+                if station not in self.od_distributions:
+                    self.od_distributions[station] = self.router.destinations(station)
+                dests, probs = self.od_distributions[station]
+                if not dests:
+                    self._enqueue(-1,0,size,station)
+                for destination,prob in zip(dests,probs):
+                    self._generate_pair(station,destination,size*prob,period)
+        self.push(self.now+settings.group_step_s,"generate")
+
+    def _generate_pair(self, origin, destination, size, period):
+        if size < 1e-9:
+            return
+        key = (origin,destination,period)
+        if key not in self.generation_plans:
+            routes = self.router.candidates(origin,destination)
+            probabilities = self.router.probabilities(origin,destination,period)
+            plan = []
+            for route, probability in zip(routes,probabilities):
+                if route not in self.route_ids:
+                    self.route_ids[route] = len(self.route_registry)
+                    self.route_registry.append(route)
+                plan.append((self.route_ids[route],float(probability)))
+            self.generation_plans[key] = plan
+        plan = self.generation_plans[key]
+        if not plan:
+            self._enqueue(-1,0,size,origin)
+        for route,probability in plan:
+            self._enqueue(route,0,size*probability,origin)
 
     def _exchange(self, tid, station, retire):
-        return 0.0,0.0,0.0
+        off = on = 0.0
+        if self.passengers:
+            kept = []
+            for gid in self.onboard[tid]:
+                row = self.groups.values[gid]
+                route = self.route_registry[row["route"]]
+                leg = route.legs[row["leg"]]
+                if leg.path[-1] == station.id or retire:
+                    size = float(row["size"])
+                    off += size
+                    row["size"] = 0
+                    if leg.path[-1] == station.id:
+                        self._enqueue(int(row["route"]),int(row["leg"])+1,size,station.id)
+                    else:
+                        # Recall/defensive terminal unload: preserve remaining ride.
+                        start = leg.path.index(station.id) if station.id in leg.path else 0
+                        replacement = type(leg)("ride",leg.path[start:],leg.lines)
+                        changed = type(route)((replacement,)+route.legs[int(row["leg"])+1:],route.ride_s,route.transfers,route.walk_s)
+                        if changed not in self.route_ids:
+                            self.route_ids[changed] = len(self.route_registry)
+                            self.route_registry.append(changed)
+                        self._enqueue(self.route_ids[changed],0,size,station.id)
+                else:
+                    kept.append(gid)
+            self.onboard[tid] = kept
+            self.state[tid]["load"] -= off
+            if not retire:
+                free = self.network.train.capacity-float(self.state[tid]["load"])
+                path = self.train_paths[tid]
+                pos = int(self.state[tid]["pos"])
+                ahead = path[pos+1:]+path[:pos] if self.lines[self.train_lines[tid]].is_loop else path[pos+1:]
+                retained = []
+                period = min(len(self.network.schedule.headways[self.train_lines[tid]])-1,int((self.now-self.start)//(self.network.schedule.period_len_min*60)))
+                metric_key = (self.train_lines[tid],period)
+                for gid in self.queues[station.id]:
+                    row = self.groups.values[gid]
+                    route = self.route_registry[row["route"]] if row["route"] >= 0 else None
+                    leg = route.legs[row["leg"]] if route else None
+                    suitable = leg and self.train_lines[tid] in leg.lines and leg.path[-1] in ahead
+                    if not suitable:
+                        retained.append(gid)
+                        continue
+                    size = float(row["size"])
+                    self.boarding_eligible[metric_key] += size
+                    board = min(free,size)
+                    remainder = size-board
+                    if remainder > 1e-9:
+                        self.denied += remainder
+                        self.boarding_denied[metric_key] += remainder
+                    if board > 1e-9:
+                        self.wait_sum += board*(self.now-float(row["arrived"]))
+                        self.waiting[station.id] -= board
+                        on += board
+                        free -= board
+                        boarded_gid = self.groups.add(int(row["route"]),int(row["leg"]),self.now,board)
+                        self.onboard[tid].append(boarded_gid)
+                        row = self.groups.values[gid]  # store may have reallocated
+                        row["size"] = remainder
+                    if remainder > 1e-9:
+                        retained.append(gid)
+                    else:
+                        self.queued_index.pop((station.id,int(row["route"]),int(row["leg"]),float(row["arrived"])),None)
+                self.queues[station.id] = retained
+                self.state[tid]["load"] += on
+        delays = self.network.settings.delays
+        probability = min(1,delays.p0*(off+on)/self.network.train.capacity)
+        delay = float(delay_duration(self.streams.delays,delays.mean_s,delays.std_s)) if probability > 0 and self.streams.delays.random() < probability else 0.0
+        return off,on,delay
 
     def _record_trip(self, trip):
-        pass
+        total = self.trip_totals[(trip["from"],trip["to"])]
+        total[0] += trip["load"]
+        total[1] += 1
 
     def _sample(self):
         active = int(np.count_nonzero(self.state["phase"]))
         self.peak_active = max(self.peak_active,active)
         if self.record:
-            self.series.append({"time":self.now,"waiting":{},"trains_active":active})
+            self.series.append({"time":self.now,"waiting":dict(self.waiting),"trains_active":active,"appeared":self.appeared,"completed":self.completed,"riding":float(self.state["load"].sum()),"walking":self.walking})
         self.push(self.now+60,"sample")
 
     def assert_invariants(self):
@@ -275,6 +449,9 @@ class Simulator:
         assert len(self.tubes) == np.count_nonzero(self.state["phase"] == TUBE)
         assert len(self.platforms) == np.count_nonzero(self.state["phase"] == PLATFORM)
         assert sum(len(p) for p in self.pools.values())+len(self.tubes)+len(self.platforms) == len(self.state)
+        assert abs(self.appeared-sum(self.waiting.values())-float(self.state["load"].sum())-self.completed-self.walking) < 1e-6*max(1,self.appeared)
+        assert np.all(self.state["load"] >= -1e-6)
+        assert np.all(self.state["load"] <= self.network.train.capacity+1e-6)
 
     def run(self):
         while self.events:
@@ -300,10 +477,15 @@ class Simulator:
         return self.result()
 
     def _passenger_event(self, kind, payload):
-        pass
+        if kind == "generate":
+            self._generate()
+        elif kind == "transfer":
+            route,leg,size,station = payload
+            self.walking -= size
+            self._enqueue(route,leg,size,station)
 
     def _queues_empty(self):
-        return True
+        return sum(self.waiting.values()) < 1e-8 and self.walking < 1e-8
 
     def result(self):
         return {"deadlock":self.deadlock,"end_time":self.now,"assignment":self.assignment,"departures":self.departures,"used_trains":int(np.count_nonzero(self.state["used"])),"peak_active":self.peak_active,"releases":self.releases,"blocking_s":sum(self.blocking.values()),"trajectory":{"meta":{"name":self.network.meta.name,"seed":self.network.settings.seed,"day_start_s":self.start,"day_end_s":self.end},"trips":self.trips,"stops":self.stops,"series":self.series}}

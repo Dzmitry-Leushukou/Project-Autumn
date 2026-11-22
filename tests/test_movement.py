@@ -23,25 +23,25 @@ def test_kinematics():
 
 @pytest.mark.parametrize("net", [small(),small(headway=1),small([["A","B","C","D"],["A","B","E"]],fleet=24,headway=40),small([["A","B","C","D"]],(0,),fleet=4)])
 def test_safety_and_determinism(net):
-    a = Simulator(net,check_invariants=True).run()
-    b = Simulator(net,check_invariants=True).run()
+    a = Simulator(net,passengers=False,check_invariants=True).run()
+    b = Simulator(net,passengers=False,check_invariants=True).run()
     assert a == b
     assert a["departures"] > 0
     assert a["used_trains"] <= net.fleet
 
 
 def test_free_dispatch_exact_headway():
-    result = Simulator(small()).run()
+    result = Simulator(small(),passengers=False).run()
     releases = [r["time"] for r in result["releases"] if r["direction"] == 1]
     assert all(b-a == 180 for a,b in zip(releases,releases[1:]))
     assert not result["deadlock"]
 
 
 def test_congestion_and_shared_branch():
-    crowded = Simulator(small(headway=1)).run()
-    free = Simulator(small(headway=180)).run()
+    crowded = Simulator(small(headway=1),passengers=False).run()
+    free = Simulator(small(headway=180),passengers=False).run()
     assert crowded["blocking_s"] > free["blocking_s"]
-    shared = Simulator(small([["A","B","C","D"],["A","B","E"]],fleet=24,headway=40),check_invariants=True).run()
+    shared = Simulator(small([["A","B","C","D"],["A","B","E"]],fleet=24,headway=40),passengers=False,check_invariants=True).run()
     assert shared["blocking_s"] > 0
     trips = [t for t in shared["trajectory"]["trips"] if t["from"] == "A" and t["to"] == "B"]
     for a,b in zip(trips,trips[1:]):
@@ -50,11 +50,11 @@ def test_congestion_and_shared_branch():
 
 def test_ring_deadlock_and_no_turnaround():
     net = small([["A","B","C"]],(0,),fleet=12,headway=1)
-    assert Simulator(net,check_invariants=True).run()["deadlock"]
+    assert Simulator(net,passengers=False,check_invariants=True).run()["deadlock"]
     net = small([["A","B","C"]],(0,),fleet=2,headway=180)
-    a = Simulator(net).run()
+    a = Simulator(net,passengers=False).run()
     net.train.turnaround_s = 10000
-    assert a == Simulator(net).run()
+    assert a == Simulator(net,passengers=False).run()
 
 
 def test_cycle_and_allocation():
@@ -69,6 +69,6 @@ def test_ring_recall_after_period_change():
     net = small([["A","B","C"]],(0,),fleet=8,headway=60)
     net.schedule.period_len_min = 30
     net.schedule.headways = {"L1":[60,1200]}
-    result = Simulator(net,check_invariants=True).run()
+    result = Simulator(net,passengers=False,check_invariants=True).run()
     retired = [s for s in result["trajectory"]["stops"] if s["retire"] and 19800 < s["arrival"] < 21600]
     assert retired
