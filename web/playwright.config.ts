@@ -4,6 +4,7 @@ const webPort = process.env.METRO_WEB_PORT ?? "5173";
 const apiPort = process.env.METRO_API_PORT ?? "8000";
 const apiUrl = `http://127.0.0.1:${apiPort}`;
 const reuse = process.env.METRO_E2E_FRESH !== "1";
+const externalBaseURL = process.env.METRO_E2E_BASE_URL;
 const python = path.resolve(
   "..",
   ".venv",
@@ -15,21 +16,23 @@ export default defineConfig({
   expect: { timeout: 90000 },
   workers: 1,
   use: {
-    baseURL: `http://127.0.0.1:${webPort}`,
+    baseURL: externalBaseURL ?? `http://127.0.0.1:${webPort}`,
     viewport: { width: 1440, height: 1100 },
     screenshot: "only-on-failure",
   },
-  webServer: [
-    {
-      command: `npm run dev -- --strictPort --port ${webPort}`,
-      url: `http://127.0.0.1:${webPort}`,
-      env: { METRO_API_URL: apiUrl },
-      reuseExistingServer: reuse,
-    },
-    {
-      command: `"${python}" -m uvicorn api.main:app --app-dir .. --host 127.0.0.1 --port ${apiPort}`,
-      url: `${apiUrl}/health`,
-      reuseExistingServer: reuse,
-    },
-  ],
+  webServer: externalBaseURL
+    ? []
+    : [
+        {
+          command: `npm run dev -- --strictPort --port ${webPort}`,
+          url: `http://127.0.0.1:${webPort}`,
+          env: { METRO_API_URL: apiUrl },
+          reuseExistingServer: reuse,
+        },
+        {
+          command: `"${python}" -m uvicorn api.main:app --app-dir .. --host 127.0.0.1 --port ${apiPort}`,
+          url: `${apiUrl}/health`,
+          reuseExistingServer: reuse,
+        },
+      ],
 });

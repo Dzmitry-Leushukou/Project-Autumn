@@ -947,7 +947,13 @@ export default function App() {
           <span>
             Дискретные события · общий seed · воспроизводимые эксперименты
           </span>
-          <a href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer">
+          <a
+            href={
+              import.meta.env.VITE_API_DOCS_URL ?? "http://127.0.0.1:8000/docs"
+            }
+            target="_blank"
+            rel="noreferrer"
+          >
             API ↗
           </a>
         </footer>

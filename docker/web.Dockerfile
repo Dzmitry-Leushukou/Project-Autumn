@@ -1,0 +1,12 @@
+FROM node:24-alpine AS build
+WORKDIR /app
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+ENV VITE_API_DOCS_URL=/api/docs
+RUN npm run build
+
+FROM nginx:1.28-alpine
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist/ /usr/share/nginx/html/
+EXPOSE 8080

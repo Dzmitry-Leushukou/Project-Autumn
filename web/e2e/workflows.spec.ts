@@ -3,6 +3,25 @@ import path from "node:path";
 import fs from "node:fs";
 const screenshots = path.resolve("../docs/screenshots");
 fs.mkdirSync(screenshots, { recursive: true });
+
+test("API documentation link opens working Swagger and OpenAPI schema", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const link = page.getByRole("link", { name: "API ↗", exact: true });
+  await expect(link).toBeVisible();
+  const href = await link.getAttribute("href");
+  const url = new URL(href!, page.url()).href;
+  const response = await page.request.get(url);
+  expect(response.ok()).toBeTruthy();
+  const html = await response.text();
+  expect(html).toContain("SwaggerUIBundle");
+  const schemaPath = html.match(/url: ['"]([^'"]+)['"]/);
+  expect(schemaPath).toBeTruthy();
+  const schema = await page.request.get(new URL(schemaPath![1], url).href);
+  expect(schema.ok()).toBeTruthy();
+  expect((await schema.json()).paths).toHaveProperty("/simulate");
+});
 async function configureSearch(page: Page) {
   await page.getByText("Параметры поиска", { exact: true }).click();
   await page.getByLabel("Популяция", { exact: true }).fill("4");
