@@ -481,6 +481,12 @@ export default function App() {
             {busy === "simulate" ? "Расчёт…" : "▶ Запустить симуляцию"}
           </button>
         </div>
+        {!n.meta.synthetic && n.meta.description && (
+          <details className="message">
+            <summary>Источники и границы модели</summary>
+            <p>{n.meta.description}</p>
+          </details>
+        )}
         {error && (
           <div className="message error" role="alert">
             {error}

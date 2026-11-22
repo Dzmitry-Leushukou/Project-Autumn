@@ -18,7 +18,12 @@ def main():
     summary = {
         "simulation_s": simulation_s,
         "optimization_s": optimization_s,
-        "synthetic": True,
+        "synthetic": n.meta.synthetic,
+        "network": n.meta.name,
+        "baseline": {
+            k: run["metrics"][k]
+            for k in ("W", "D", "LF", "appeared", "transported", "unfinished")
+        },
         "od_source": "model",
         "options": [
             {

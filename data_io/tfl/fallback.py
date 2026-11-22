@@ -75,6 +75,10 @@ def london_fallback():
 
 
 if __name__ == "__main__":
-    path = Path(__file__).resolve().parents[2] / "datasets/london/london_subset.json"
+    # Keep fallback generation separate from the now real-data demo.
+    path = (
+        Path(__file__).resolve().parents[2]
+        / ".verification/london_synthetic_fallback.json"
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     write_network(london_fallback(), path)

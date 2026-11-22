@@ -1,0 +1,417 @@
+{
+  "workbook_url": "https://crowding.data.tfl.gov.uk/NUMBAT/NUMBAT%202025/NBT25TWT_Outputs.xlsx",
+  "workbook_sha256": "a10e5f767750538ecac99cf0d2131243672574df88b9c933f03b9357c5f67db2",
+  "publication_date": "2026-07-01",
+  "demand_year": 2025,
+  "day_type": "TWT",
+  "retrieved_utc": "2026-11-22T09:24:07.086694+00:00",
+  "stations": {
+    "Green Park": {
+      "naptan": "940GZZLUGPK",
+      "lat": 51.506947,
+      "lon": -0.142787
+    },
+    "Westminster": {
+      "naptan": "940GZZLUWSM",
+      "lat": 51.50132,
+      "lon": -0.124861
+    },
+    "Waterloo": {
+      "naptan": "940GZZLUWLO",
+      "lat": 51.503299,
+      "lon": -0.11478
+    },
+    "Southwark": {
+      "naptan": "940GZZLUSWK",
+      "lat": 51.50427,
+      "lon": -0.105331
+    },
+    "London Bridge": {
+      "naptan": "940GZZLULNB",
+      "lat": 51.505721,
+      "lon": -0.088873
+    },
+    "Bermondsey": {
+      "naptan": "940GZZLUBMY",
+      "lat": 51.49775,
+      "lon": -0.063993
+    },
+    "Canada Water": {
+      "naptan": "940GZZLUCWR",
+      "lat": 51.497931,
+      "lon": -0.049405
+    },
+    "Canary Wharf": {
+      "naptan": "940GZZLUCYF",
+      "lat": 51.503488,
+      "lon": -0.018246
+    },
+    "North Greenwich": {
+      "naptan": "940GZZLUNGW",
+      "lat": 51.50047,
+      "lon": 0.004287
+    },
+    "Elephant & Castle": {
+      "naptan": "940GZZLUEAC",
+      "lat": 51.494536,
+      "lon": -0.100606
+    },
+    "Lambeth North": {
+      "naptan": "940GZZLULBN",
+      "lat": 51.498808,
+      "lon": -0.112315
+    },
+    "Embankment": {
+      "naptan": "940GZZLUEMB",
+      "lat": 51.507058,
+      "lon": -0.122666
+    },
+    "Charing Cross": {
+      "naptan": "940GZZLUCHX",
+      "lat": 51.50741,
+      "lon": -0.127277
+    },
+    "Piccadilly Circus": {
+      "naptan": "940GZZLUPCC",
+      "lat": 51.51005,
+      "lon": -0.133798
+    }
+  },
+  "station_entries": {
+    "Green Park": {
+      "source_row": 170,
+      "asc": "GPKu",
+      "entries_05_25": 48977.76634105,
+      "entries_24h": 48994.38555605
+    },
+    "Westminster": {
+      "source_row": 453,
+      "asc": "WMSu",
+      "entries_05_25": 29845.078105204,
+      "entries_24h": 29847.62677039001
+    },
+    "Waterloo": {
+      "source_row": 429,
+      "asc": "WLOu",
+      "entries_05_25": 135356.1400526622,
+      "entries_24h": 135373.5263368022
+    },
+    "Southwark": {
+      "source_row": 373,
+      "asc": "SWKu",
+      "entries_05_25": 16149.248471503839,
+      "entries_24h": 16152.11952128384
+    },
+    "London Bridge": {
+      "source_row": 257,
+      "asc": "LONu",
+      "entries_05_25": 99238.44404532269,
+      "entries_24h": 99254.71244672265
+    },
+    "Bermondsey": {
+      "source_row": 41,
+      "asc": "BERu",
+      "entries_05_25": 11992.85883846,
+      "entries_24h": 11995.691429899998
+    },
+    "Canada Water": {
+      "source_row": 73,
+      "asc": "CWRu",
+      "entries_05_25": 15071.08025793,
+      "entries_24h": 15072.840396922002
+    },
+    "Canary Wharf": {
+      "source_row": 75,
+      "asc": "CWFu",
+      "entries_05_25": 60695.33876988396,
+      "entries_24h": 60709.94878476534
+    },
+    "North Greenwich": {
+      "source_row": 288,
+      "asc": "NOGu",
+      "entries_05_25": 34702.52177552,
+      "entries_24h": 34706.9976418
+    },
+    "Elephant & Castle": {
+      "source_row": 136,
+      "asc": "ELEu",
+      "entries_05_25": 21853.95784715462,
+      "entries_24h": 21855.597868554625
+    },
+    "Lambeth North": {
+      "source_row": 241,
+      "asc": "LAMu",
+      "entries_05_25": 4255.051710295001,
+      "entries_24h": 4255.051710295001
+    },
+    "Embankment": {
+      "source_row": 140,
+      "asc": "EMBu",
+      "entries_05_25": 30161.598842910535,
+      "entries_24h": 30166.574227901805
+    },
+    "Charing Cross": {
+      "source_row": 86,
+      "asc": "CHXu",
+      "entries_05_25": 25530.903934705093,
+      "entries_24h": 25531.69959934509
+    },
+    "Piccadilly Circus": {
+      "source_row": 311,
+      "asc": "PICu",
+      "entries_05_25": 39728.4640977,
+      "entries_24h": 39729.6349199
+    }
+  },
+  "total_entries_05_25": 573558.453090302,
+  "schedule": {
+    "L1": {
+      "method": "3600 / mean hourly trains over both directions and all selected links; rounded to integer seconds",
+      "source_rows": [
+        548,
+        549,
+        550,
+        551,
+        552,
+        553,
+        554,
+        555,
+        586,
+        587,
+        588,
+        589,
+        590,
+        591,
+        592,
+        593
+      ],
+      "periods": [
+        {
+          "period": 0,
+          "mean_trains_per_hour": 5.3125,
+          "headway_s": 678
+        },
+        {
+          "period": 1,
+          "mean_trains_per_hour": 16.125,
+          "headway_s": 223
+        },
+        {
+          "period": 2,
+          "mean_trains_per_hour": 26.6875,
+          "headway_s": 135
+        },
+        {
+          "period": 3,
+          "mean_trains_per_hour": 26.4375,
+          "headway_s": 136
+        },
+        {
+          "period": 4,
+          "mean_trains_per_hour": 27.4375,
+          "headway_s": 131
+        },
+        {
+          "period": 5,
+          "mean_trains_per_hour": 24.3125,
+          "headway_s": 148
+        },
+        {
+          "period": 6,
+          "mean_trains_per_hour": 23.0625,
+          "headway_s": 156
+        },
+        {
+          "period": 7,
+          "mean_trains_per_hour": 21.8125,
+          "headway_s": 165
+        },
+        {
+          "period": 8,
+          "mean_trains_per_hour": 21.875,
+          "headway_s": 165
+        },
+        {
+          "period": 9,
+          "mean_trains_per_hour": 22.75,
+          "headway_s": 158
+        },
+        {
+          "period": 10,
+          "mean_trains_per_hour": 23.3125,
+          "headway_s": 154
+        },
+        {
+          "period": 11,
+          "mean_trains_per_hour": 25.875,
+          "headway_s": 139
+        },
+        {
+          "period": 12,
+          "mean_trains_per_hour": 27.875,
+          "headway_s": 129
+        },
+        {
+          "period": 13,
+          "mean_trains_per_hour": 27.125,
+          "headway_s": 133
+        },
+        {
+          "period": 14,
+          "mean_trains_per_hour": 24.8125,
+          "headway_s": 145
+        },
+        {
+          "period": 15,
+          "mean_trains_per_hour": 22.25,
+          "headway_s": 162
+        },
+        {
+          "period": 16,
+          "mean_trains_per_hour": 21.8125,
+          "headway_s": 165
+        },
+        {
+          "period": 17,
+          "mean_trains_per_hour": 22.0625,
+          "headway_s": 163
+        },
+        {
+          "period": 18,
+          "mean_trains_per_hour": 17.0,
+          "headway_s": 212
+        },
+        {
+          "period": 19,
+          "mean_trains_per_hour": 8.0625,
+          "headway_s": 447
+        }
+      ]
+    },
+    "L2": {
+      "method": "3600 / mean hourly trains over both directions and all selected links; rounded to integer seconds",
+      "source_rows": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        47,
+        48,
+        49,
+        50,
+        51
+      ],
+      "periods": [
+        {
+          "period": 0,
+          "mean_trains_per_hour": 2.0,
+          "headway_s": 1800
+        },
+        {
+          "period": 1,
+          "mean_trains_per_hour": 11.0,
+          "headway_s": 327
+        },
+        {
+          "period": 2,
+          "mean_trains_per_hour": 18.3,
+          "headway_s": 197
+        },
+        {
+          "period": 3,
+          "mean_trains_per_hour": 20.0,
+          "headway_s": 180
+        },
+        {
+          "period": 4,
+          "mean_trains_per_hour": 19.6,
+          "headway_s": 184
+        },
+        {
+          "period": 5,
+          "mean_trains_per_hour": 16.1,
+          "headway_s": 224
+        },
+        {
+          "period": 6,
+          "mean_trains_per_hour": 16.0,
+          "headway_s": 225
+        },
+        {
+          "period": 7,
+          "mean_trains_per_hour": 16.0,
+          "headway_s": 225
+        },
+        {
+          "period": 8,
+          "mean_trains_per_hour": 16.0,
+          "headway_s": 225
+        },
+        {
+          "period": 9,
+          "mean_trains_per_hour": 16.0,
+          "headway_s": 225
+        },
+        {
+          "period": 10,
+          "mean_trains_per_hour": 16.0,
+          "headway_s": 225
+        },
+        {
+          "period": 11,
+          "mean_trains_per_hour": 18.7,
+          "headway_s": 193
+        },
+        {
+          "period": 12,
+          "mean_trains_per_hour": 20.0,
+          "headway_s": 180
+        },
+        {
+          "period": 13,
+          "mean_trains_per_hour": 20.0,
+          "headway_s": 180
+        },
+        {
+          "period": 14,
+          "mean_trains_per_hour": 17.5,
+          "headway_s": 206
+        },
+        {
+          "period": 15,
+          "mean_trains_per_hour": 16.1,
+          "headway_s": 224
+        },
+        {
+          "period": 16,
+          "mean_trains_per_hour": 16.0,
+          "headway_s": 225
+        },
+        {
+          "period": 17,
+          "mean_trains_per_hour": 16.0,
+          "headway_s": 225
+        },
+        {
+          "period": 18,
+          "mean_trains_per_hour": 13.8,
+          "headway_s": 261
+        },
+        {
+          "period": 19,
+          "mean_trains_per_hour": 6.3,
+          "headway_s": 571
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "Typical day, not a specific date; 2025 demand combined with 2026 API topology",
+    "Station entries include all LU lines at each station; subset-only destination model changes real distribution",
+    "Straight-line interstation distances are estimates, not measured tunnel lengths",
+    "Hourly headways average differing directions/links; model has one headway for both directions",
+    "Platform doors manually annotated and not verified by an authoritative accessible source; Waterloo flag also applies to Bakerloo",
+    "Fleet and train parameters are assumptions"
+  ]
+}

@@ -145,7 +145,7 @@ test("constructor: build from clicks, doors, demand, optimize and run", async ({
   });
   expect(errors).toEqual([]);
 });
-test("London fallback loads in one action and compares options", async ({
+test("London TfL data loads in one action and compares options", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -153,6 +153,8 @@ test("London fallback loads in one action and compares options", async ({
   await page.goto("/");
   await page.getByLabel("Демо-сеть").selectOption("london_subset");
   await expect(page.locator(".scenario-name")).toContainText("Лондон");
+  await expect(page.locator(".scenario-name")).toContainText("NUMBAT 2025 TWT");
+  await expect(page.locator(".scenario-name")).toContainText("Данные TfL");
   await page.getByRole("button", { name: "▶ Запустить симуляцию" }).click();
   await expect(page.locator("div[role=status]")).toContainText("Прогон готов");
   await configureSearch(page);
