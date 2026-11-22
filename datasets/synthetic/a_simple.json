@@ -9,38 +9,74 @@
     {
       "id": "A0",
       "name": "Станция A0",
-      "x": 880.0,
-      "y": 500.0
+      "x": {
+        "value": 880.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 500.0,
+        "source": "assumption"
+      }
     },
     {
       "id": "A1",
       "name": "Станция A1",
-      "x": 690.0,
-      "y": 829.09
+      "x": {
+        "value": 690.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 829.09,
+        "source": "assumption"
+      }
     },
     {
       "id": "A2",
       "name": "Станция A2",
-      "x": 310.0,
-      "y": 829.09
+      "x": {
+        "value": 310.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 829.09,
+        "source": "assumption"
+      }
     },
     {
       "id": "A3",
       "name": "Станция A3",
-      "x": 120.0,
-      "y": 500.0
+      "x": {
+        "value": 120.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 500.0,
+        "source": "assumption"
+      }
     },
     {
       "id": "A4",
       "name": "Станция A4",
-      "x": 310.0,
-      "y": 170.91
+      "x": {
+        "value": 310.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 170.91,
+        "source": "assumption"
+      }
     },
     {
       "id": "A5",
       "name": "Станция A5",
-      "x": 690.0,
-      "y": 170.91
+      "x": {
+        "value": 690.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 170.91,
+        "source": "assumption"
+      }
     }
   ],
   "lines": [
@@ -103,7 +139,10 @@
   ],
   "transfers": [],
   "train": {},
-  "fleet": 12,
+  "fleet": {
+    "value": 12,
+    "source": "assumption"
+  },
   "demand": [
     {
       "station": "A0",
@@ -4427,7 +4466,13 @@
     }
   ],
   "settings": {
-    "day_start_s": 18000,
-    "day_end_s": 90000
+    "day_start_s": {
+      "value": 18000,
+      "source": "assumption"
+    },
+    "day_end_s": {
+      "value": 90000,
+      "source": "assumption"
+    }
   }
 }

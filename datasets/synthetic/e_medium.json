@@ -9,152 +9,302 @@
     {
       "id": "A0",
       "name": "Станция A0",
-      "x": 880.0,
-      "y": 500.0
+      "x": {
+        "value": 880.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 500.0,
+        "source": "assumption"
+      }
     },
     {
       "id": "A1",
       "name": "Станция A1",
-      "x": 868.06,
-      "y": 594.5
+      "x": {
+        "value": 868.06,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 594.5,
+        "source": "assumption"
+      }
     },
     {
       "id": "A2",
       "name": "Станция A2",
-      "x": 833.0,
-      "y": 683.07
+      "x": {
+        "value": 833.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 683.07,
+        "source": "assumption"
+      }
     },
     {
       "id": "A3",
       "name": "Станция A3",
-      "x": 777.01,
-      "y": 760.13
+      "x": {
+        "value": 777.01,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 760.13,
+        "source": "assumption"
+      }
     },
     {
       "id": "A4",
       "name": "Станция A4",
-      "x": 703.61,
-      "y": 820.84
+      "x": {
+        "value": 703.61,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 820.84,
+        "source": "assumption"
+      }
     },
     {
       "id": "A5",
       "name": "Станция A5",
-      "x": 617.43,
-      "y": 861.4
+      "x": {
+        "value": 617.43,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 861.4,
+        "source": "assumption"
+      }
     },
     {
       "id": "A6",
       "name": "Станция A6",
-      "x": 523.86,
-      "y": 879.25
+      "x": {
+        "value": 523.86,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 879.25,
+        "source": "assumption"
+      }
     },
     {
       "id": "A7",
       "name": "Станция A7",
-      "x": 428.8,
-      "y": 873.27
+      "x": {
+        "value": 428.8,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 873.27,
+        "source": "assumption"
+      }
     },
     {
       "id": "A8",
       "name": "Станция A8",
-      "x": 338.2,
-      "y": 843.83
+      "x": {
+        "value": 338.2,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 843.83,
+        "source": "assumption"
+      }
     },
     {
       "id": "B0",
       "name": "Станция B0",
-      "x": 257.78,
-      "y": 792.8
+      "x": {
+        "value": 257.78,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 792.8,
+        "source": "assumption"
+      }
     },
     {
       "id": "B1",
       "name": "Станция B1",
-      "x": 192.57,
-      "y": 723.36
+      "x": {
+        "value": 192.57,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 723.36,
+        "source": "assumption"
+      }
     },
     {
       "id": "B2",
       "name": "Станция B2",
-      "x": 146.68,
-      "y": 639.89
+      "x": {
+        "value": 146.68,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 639.89,
+        "source": "assumption"
+      }
     },
     {
       "id": "B3",
       "name": "Станция B3",
-      "x": 123.0,
-      "y": 547.63
+      "x": {
+        "value": 123.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 547.63,
+        "source": "assumption"
+      }
     },
     {
       "id": "B4",
       "name": "Станция B4",
-      "x": 123.0,
-      "y": 452.37
+      "x": {
+        "value": 123.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 452.37,
+        "source": "assumption"
+      }
     },
     {
       "id": "B5",
       "name": "Станция B5",
-      "x": 146.68,
-      "y": 360.11
+      "x": {
+        "value": 146.68,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 360.11,
+        "source": "assumption"
+      }
     },
     {
       "id": "B6",
       "name": "Станция B6",
-      "x": 192.57,
-      "y": 276.64
+      "x": {
+        "value": 192.57,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 276.64,
+        "source": "assumption"
+      }
     },
     {
       "id": "B7",
       "name": "Станция B7",
-      "x": 257.78,
-      "y": 207.2
+      "x": {
+        "value": 257.78,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 207.2,
+        "source": "assumption"
+      }
     },
     {
       "id": "C0",
       "name": "Станция C0",
-      "x": 338.2,
-      "y": 156.17
+      "x": {
+        "value": 338.2,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 156.17,
+        "source": "assumption"
+      }
     },
     {
       "id": "C1",
       "name": "Станция C1",
-      "x": 428.8,
-      "y": 126.73
+      "x": {
+        "value": 428.8,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 126.73,
+        "source": "assumption"
+      }
     },
     {
       "id": "C2",
       "name": "Станция C2",
-      "x": 523.86,
-      "y": 120.75
+      "x": {
+        "value": 523.86,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 120.75,
+        "source": "assumption"
+      }
     },
     {
       "id": "C3",
       "name": "Станция C3",
-      "x": 617.43,
-      "y": 138.6
+      "x": {
+        "value": 617.43,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 138.6,
+        "source": "assumption"
+      }
     },
     {
       "id": "C4",
       "name": "Станция C4",
-      "x": 703.61,
-      "y": 179.16
+      "x": {
+        "value": 703.61,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 179.16,
+        "source": "assumption"
+      }
     },
     {
       "id": "C5",
       "name": "Станция C5",
-      "x": 777.01,
-      "y": 239.87
+      "x": {
+        "value": 777.01,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 239.87,
+        "source": "assumption"
+      }
     },
     {
       "id": "C6",
       "name": "Станция C6",
-      "x": 833.0,
-      "y": 316.93
+      "x": {
+        "value": 833.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 316.93,
+        "source": "assumption"
+      }
     },
     {
       "id": "C7",
       "name": "Станция C7",
-      "x": 868.06,
-      "y": 405.5
+      "x": {
+        "value": 868.06,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 405.5,
+        "source": "assumption"
+      }
     }
   ],
   "lines": [
@@ -406,7 +556,10 @@
   ],
   "transfers": [],
   "train": {},
-  "fleet": 60,
+  "fleet": {
+    "value": 60,
+    "source": "assumption"
+  },
   "demand": [
     {
       "station": "A0",
@@ -18410,7 +18563,13 @@
     }
   ],
   "settings": {
-    "day_start_s": 18000,
-    "day_end_s": 90000
+    "day_start_s": {
+      "value": 18000,
+      "source": "assumption"
+    },
+    "day_end_s": {
+      "value": 90000,
+      "source": "assumption"
+    }
   }
 }

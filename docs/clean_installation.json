@@ -1,0 +1,12 @@
+{
+  "installation": "py -3.13 scripts/setup.py",
+  "installation_exit": 0,
+  "clean_python_tests": "51 passed",
+  "clean_vite_build": "passed",
+  "health": {
+    "status": "ok"
+  },
+  "frontend_status": 200,
+  "python": "3.13.14",
+  "node": "v24.18.0"
+}

@@ -9,44 +9,86 @@
     {
       "id": "A",
       "name": "Станция A",
-      "x": 880.0,
-      "y": 500.0
+      "x": {
+        "value": 880.0,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 500.0,
+        "source": "assumption"
+      }
     },
     {
       "id": "B",
       "name": "Станция B",
-      "x": 736.93,
-      "y": 797.1
+      "x": {
+        "value": 736.93,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 797.1,
+        "source": "assumption"
+      }
     },
     {
       "id": "X",
       "name": "Станция X",
-      "x": 415.44,
-      "y": 870.47
+      "x": {
+        "value": 415.44,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 870.47,
+        "source": "assumption"
+      }
     },
     {
       "id": "C",
       "name": "Станция C",
-      "x": 157.63,
-      "y": 664.88
+      "x": {
+        "value": 157.63,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 664.88,
+        "source": "assumption"
+      }
     },
     {
       "id": "D",
       "name": "Станция D",
-      "x": 157.63,
-      "y": 335.12
+      "x": {
+        "value": 157.63,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 335.12,
+        "source": "assumption"
+      }
     },
     {
       "id": "E",
       "name": "Станция E",
-      "x": 415.44,
-      "y": 129.53
+      "x": {
+        "value": 415.44,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 129.53,
+        "source": "assumption"
+      }
     },
     {
       "id": "F",
       "name": "Станция F",
-      "x": 736.93,
-      "y": 202.9
+      "x": {
+        "value": 736.93,
+        "source": "assumption"
+      },
+      "y": {
+        "value": 202.9,
+        "source": "assumption"
+      }
     }
   ],
   "lines": [
@@ -135,7 +177,10 @@
   ],
   "transfers": [],
   "train": {},
-  "fleet": 16,
+  "fleet": {
+    "value": 16,
+    "source": "assumption"
+  },
   "demand": [
     {
       "station": "A",
@@ -5179,7 +5224,13 @@
     }
   ],
   "settings": {
-    "day_start_s": 18000,
-    "day_end_s": 90000
+    "day_start_s": {
+      "value": 18000,
+      "source": "assumption"
+    },
+    "day_end_s": {
+      "value": 90000,
+      "source": "assumption"
+    }
   }
 }

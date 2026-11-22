@@ -10417,7 +10417,13 @@
     }
   ],
   "settings": {
-    "day_start_s": 18000,
-    "day_end_s": 90000
+    "day_start_s": {
+      "value": 18000,
+      "source": "assumption"
+    },
+    "day_end_s": {
+      "value": 90000,
+      "source": "assumption"
+    }
   }
 }

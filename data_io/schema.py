@@ -1,4 +1,5 @@
 """Versioned public schema. Tagged numbers accept provenance without burdening math."""
+
 from typing import Annotated, Literal
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
@@ -23,8 +24,12 @@ def integer(value):
     return value
 
 
-Number = Annotated[float, BeforeValidator(unwrap, json_schema_input_type=float | TaggedNumber)]
-Integer = Annotated[int, BeforeValidator(integer, json_schema_input_type=int | TaggedNumber)]
+Number = Annotated[
+    float, BeforeValidator(unwrap, json_schema_input_type=float | TaggedNumber)
+]
+Integer = Annotated[
+    int, BeforeValidator(integer, json_schema_input_type=int | TaggedNumber)
+]
 Positive = Annotated[Number, Field(gt=0, allow_inf_nan=False)]
 Nonnegative = Annotated[Number, Field(ge=0, allow_inf_nan=False)]
 PositiveInt = Annotated[Integer, Field(gt=0, strict=True)]
@@ -32,7 +37,9 @@ Natural = Annotated[Integer, Field(ge=0, strict=True)]
 
 
 class Model(BaseModel):
-    model_config = ConfigDict(extra="forbid", populate_by_name=True, allow_inf_nan=False)
+    model_config = ConfigDict(
+        extra="forbid", populate_by_name=True, allow_inf_nan=False
+    )
 
 
 class Meta(Model):

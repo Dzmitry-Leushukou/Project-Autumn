@@ -1,4 +1,5 @@
 """Validation produces a reviewable report before any model is run."""
+
 import copy
 import json
 import math
@@ -13,15 +14,29 @@ def read_network(path: str | Path) -> dict:
 
 
 def write_network(document: dict, path: str | Path):
-    Path(path).write_text(json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    Path(path).write_text(
+        json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def pairs(line):
-    return list(zip(line.stations, line.stations[1:] + (line.stations[:1] if line.is_loop else [])))
+    return list(
+        zip(
+            line.stations,
+            line.stations[1:] + (line.stations[:1] if line.is_loop else []),
+        )
+    )
 
 
 def validate(document: dict) -> tuple[Network | None, dict]:
-    report = {"errors": [], "warnings": [], "missing": [], "assumptions": [], "sources": {}}
+    report = {
+        "errors": [],
+        "warnings": [],
+        "missing": [],
+        "assumptions": [],
+        "sources": {},
+    }
 
     def add(kind, path, message, **extra):
         report[kind].append({"path": path, "message": message, **extra})
@@ -61,7 +76,13 @@ def validate(document: dict) -> tuple[Network | None, dict]:
                 for i, item in enumerate(value):
                     defaults(item, f"{key}.{i}")
             elif name not in model.model_fields_set and value is not None:
-                add("assumptions", key, "Применено значение по умолчанию", value=value, source="assumption")
+                add(
+                    "assumptions",
+                    key,
+                    "Применено значение по умолчанию",
+                    value=value,
+                    source="assumption",
+                )
                 report["sources"][key] = "assumption"
 
     defaults(network)
@@ -77,7 +98,11 @@ def validate(document: dict) -> tuple[Network | None, dict]:
     used = set()
     for i, line in enumerate(network.lines):
         if len(set(line.stations)) != len(line.stations):
-            add("errors", f"lines.{i}.stations", "Ветка должна быть простым путём/кольцом без повторов")
+            add(
+                "errors",
+                f"lines.{i}.stations",
+                "Ветка должна быть простым путём/кольцом без повторов",
+            )
         if line.is_loop and len(line.stations) < 3:
             add("errors", f"lines.{i}.stations", "Кольцу нужны хотя бы три станции")
         for station in line.stations:
@@ -88,9 +113,19 @@ def validate(document: dict) -> tuple[Network | None, dict]:
         if line.is_loop:
             if line.depot_station is None:
                 line.depot_station = line.stations[0]
-                add("assumptions", f"lines.{i}.depot_station", "Депо у первой станции", value=line.depot_station, source="assumption")
+                add(
+                    "assumptions",
+                    f"lines.{i}.depot_station",
+                    "Депо у первой станции",
+                    value=line.depot_station,
+                    source="assumption",
+                )
             elif line.depot_station not in line.stations:
-                add("errors", f"lines.{i}.depot_station", "Депо должно находиться на ветке")
+                add(
+                    "errors",
+                    f"lines.{i}.depot_station",
+                    "Депо должно находиться на ветке",
+                )
         used.update(frozenset(p) for p in pairs(line))
     graph = nx.Graph()
     graph.add_nodes_from(stations)
@@ -98,7 +133,11 @@ def validate(document: dict) -> tuple[Network | None, dict]:
     for i, segment in enumerate(network.segments):
         key = frozenset((segment.origin, segment.destination))
         if key in segments or len(key) != 2:
-            add("errors", f"segments.{i}", "Перегон должен быть уникальным и соединять разные станции")
+            add(
+                "errors",
+                f"segments.{i}",
+                "Перегон должен быть уникальным и соединять разные станции",
+            )
         segments.add(key)
         if not key <= stations:
             add("errors", f"segments.{i}", "Перегон ссылается на неизвестную станцию")
@@ -114,7 +153,11 @@ def validate(document: dict) -> tuple[Network | None, dict]:
     for i, transfer in enumerate(network.transfers):
         a, b = transfer.origin, transfer.destination
         if a == b or a not in stations or b not in stations:
-            add("errors", f"transfers.{i}", "Переход должен соединять две существующие разные станции")
+            add(
+                "errors",
+                f"transfers.{i}",
+                "Переход должен соединять две существующие разные станции",
+            )
         elif not any(l1 != l2 for l1 in membership[a] for l2 in membership[b]):
             add("errors", f"transfers.{i}", "Переход должен соединять разные ветки")
         else:
@@ -123,53 +166,105 @@ def validate(document: dict) -> tuple[Network | None, dict]:
         add("errors", "stations", "Граф сети несвязен")
     for station, lines in membership.items():
         if not lines:
-            add("errors", "stations", f"Станция {station} не обслуживается ни одной веткой")
+            add(
+                "errors",
+                "stations",
+                f"Станция {station} не обслуживается ни одной веткой",
+            )
     settings = network.settings
     if settings.day_end_s <= settings.day_start_s:
         add("errors", "settings.day_end_s", "Конец суток должен быть позже начала")
     opt = settings.optimizer
-    if opt.headway_max_s < opt.headway_min_s or math.ceil(opt.headway_min_s / opt.headway_step_s) * opt.headway_step_s > opt.headway_max_s:
-        add("errors", "settings.optimizer", "В диапазоне поиска нет допустимых интервалов")
-    periods = max(1, math.ceil((settings.day_end_s - settings.day_start_s) / (network.schedule.period_len_min * 60)))
+    if (
+        opt.headway_max_s < opt.headway_min_s
+        or math.ceil(opt.headway_min_s / opt.headway_step_s) * opt.headway_step_s
+        > opt.headway_max_s
+    ):
+        add(
+            "errors",
+            "settings.optimizer",
+            "В диапазоне поиска нет допустимых интервалов",
+        )
+    periods = max(
+        1,
+        math.ceil(
+            (settings.day_end_s - settings.day_start_s)
+            / (network.schedule.period_len_min * 60)
+        ),
+    )
     for line in network.lines:
         if line.id not in network.schedule.headways:
-            if "schedule" in network.model_fields_set and "headways" in network.schedule.model_fields_set:
+            if (
+                "schedule" in network.model_fields_set
+                and "headways" in network.schedule.model_fields_set
+            ):
                 add("errors", f"schedule.headways.{line.id}", "Нет расписания ветки")
                 add("missing", f"schedule.headways.{line.id}", "Интервалы не заданы")
             else:
                 network.schedule.headways[line.id] = [180] * periods
-                add("assumptions", f"schedule.headways.{line.id}", "Интервалы 180 секунд", value=[180] * periods, source="assumption")
+                add(
+                    "assumptions",
+                    f"schedule.headways.{line.id}",
+                    "Интервалы 180 секунд",
+                    value=[180] * periods,
+                    source="assumption",
+                )
         elif len(network.schedule.headways[line.id]) != periods:
             add("errors", f"schedule.headways.{line.id}", f"Нужно {periods} периодов")
     if set(network.schedule.headways) - line_ids:
         add("errors", "schedule.headways", "Неизвестная ветка")
     if network.fleet_assignment is None:
-        add("missing", "fleet_assignment", "Распределение не задано: будет рассчитано по формуле оборота")
-    elif set(network.fleet_assignment) != line_ids or sum(network.fleet_assignment.values()) > network.fleet:
-        add("errors", "fleet_assignment", "Нужны все ветки; сумма не должна превышать общий парк")
+        add(
+            "missing",
+            "fleet_assignment",
+            "Распределение не задано: будет рассчитано по формуле оборота",
+        )
+    elif (
+        set(network.fleet_assignment) != line_ids
+        or sum(network.fleet_assignment.values()) > network.fleet
+    ):
+        add(
+            "errors",
+            "fleet_assignment",
+            "Нужны все ветки; сумма не должна превышать общий парк",
+        )
     demand_by_station = {s: [] for s in stations}
     for i, row in enumerate(network.demand):
         if row.station not in stations:
             add("errors", f"demand.{i}.station", "Неизвестная станция")
         else:
-            demand_by_station[row.station].append((row.start_min * 60, (row.start_min + row.len_min) * 60))
+            demand_by_station[row.station].append(
+                (row.start_min * 60, (row.start_min + row.len_min) * 60)
+            )
     for station, intervals in demand_by_station.items():
         end = settings.day_start_s
         gap = False
         previous = -math.inf
         for a, b in sorted(intervals):
             if a < previous:
-                add("errors", "demand", f"Пересекаются интервалы спроса станции {station}")
+                add(
+                    "errors",
+                    "demand",
+                    f"Пересекаются интервалы спроса станции {station}",
+                )
             previous = max(previous, b)
             if a > end and end < settings.day_end_s:
                 gap = True
             if a <= end:
                 end = max(end, b)
         if gap or end < settings.day_end_s:
-            add("warnings", "demand", f"Спрос {station} не покрывает сутки; в пропусках 0 пассажиров")
+            add(
+                "warnings",
+                "demand",
+                f"Спрос {station} не покрывает сутки; в пропусках 0 пассажиров",
+            )
     if network.od_matrix is not None:
         for i, row in enumerate(network.od_matrix):
-            if row.origin not in stations or row.destination not in stations or row.origin == row.destination:
+            if (
+                row.origin not in stations
+                or row.destination not in stations
+                or row.origin == row.destination
+            ):
                 add("errors", f"od_matrix.{i}", "Нужны две разные существующие станции")
     return (None if report["errors"] else network), report
 
@@ -183,12 +278,18 @@ def require_network(document: dict) -> Network:
 
 def apply_overrides(document: dict, overrides: dict | None) -> dict:
     result = copy.deepcopy(document)
+
     def merge(dst, src):
         for k, v in src.items():
-            if isinstance(v, dict) and isinstance(dst.get(k), dict) and k != "fleet_assignment":
+            if (
+                isinstance(v, dict)
+                and isinstance(dst.get(k), dict)
+                and k != "fleet_assignment"
+            ):
                 merge(dst[k], v)
             else:
                 dst[k] = copy.deepcopy(v)
+
     if overrides:
         if set(overrides) - {"settings", "schedule", "fleet_assignment"}:
             raise ValueError("Допустимы только settings, schedule и fleet_assignment")
