@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "metro-sim"
+version = "1.0.0"
+description = "Reproducible discrete-event metro simulation and timetable optimization"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.121.3", "uvicorn==0.38.0", "pydantic==2.12.4",
+  "numpy==2.3.5", "scipy==1.16.3", "networkx==3.5",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.0.1", "httpx==0.28.1"]
+
+[tool.setuptools.packages.find]
+include = ["core*", "data_io*", "optimizer*", "api*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
