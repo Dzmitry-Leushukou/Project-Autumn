@@ -1,0 +1,1103 @@
+{
+  "$defs": {
+    "Delays": {
+      "additionalProperties": false,
+      "properties": {
+        "p0": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 0.05,
+          "ge": 0,
+          "le": 1,
+          "title": "P0"
+        },
+        "mean_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 5,
+          "gt": 0,
+          "title": "Mean S"
+        },
+        "std_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 3,
+          "ge": 0,
+          "title": "Std S"
+        }
+      },
+      "title": "Delays",
+      "type": "object"
+    },
+    "Demand": {
+      "additionalProperties": false,
+      "properties": {
+        "station": {
+          "title": "Station",
+          "type": "string"
+        },
+        "start_min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "ge": 0,
+          "title": "Start Min"
+        },
+        "len_min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "gt": 0,
+          "title": "Len Min"
+        },
+        "entries": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "ge": 0,
+          "title": "Entries"
+        }
+      },
+      "required": [
+        "station",
+        "start_min",
+        "len_min",
+        "entries"
+      ],
+      "title": "Demand",
+      "type": "object"
+    },
+    "Line": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "color": {
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "title": "Color",
+          "type": "string"
+        },
+        "is_loop": {
+          "default": false,
+          "title": "Is Loop",
+          "type": "boolean"
+        },
+        "stations": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Stations",
+          "type": "array"
+        },
+        "depot_station": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Depot Station"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "color",
+        "stations"
+      ],
+      "title": "Line",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "format_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Format Version",
+          "type": "string"
+        },
+        "synthetic": {
+          "title": "Synthetic",
+          "type": "boolean"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "synthetic"
+      ],
+      "title": "Meta",
+      "type": "object"
+    },
+    "OD": {
+      "additionalProperties": false,
+      "properties": {
+        "origin": {
+          "title": "Origin",
+          "type": "string"
+        },
+        "destination": {
+          "title": "Destination",
+          "type": "string"
+        },
+        "start_min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "ge": 0,
+          "title": "Start Min"
+        },
+        "len_min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "gt": 0,
+          "title": "Len Min"
+        },
+        "trips": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "ge": 0,
+          "title": "Trips"
+        }
+      },
+      "required": [
+        "origin",
+        "destination",
+        "start_min",
+        "len_min",
+        "trips"
+      ],
+      "title": "OD",
+      "type": "object"
+    },
+    "OptimizerSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "headway_min_s": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 60,
+          "gt": 0,
+          "title": "Headway Min S"
+        },
+        "headway_max_s": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 1200,
+          "gt": 0,
+          "title": "Headway Max S"
+        },
+        "headway_step_s": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 15,
+          "gt": 0,
+          "title": "Headway Step S"
+        },
+        "population": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 40,
+          "ge": 4,
+          "title": "Population"
+        },
+        "generations": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 30,
+          "gt": 0,
+          "title": "Generations"
+        },
+        "time_budget_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 60,
+          "gt": 0,
+          "title": "Time Budget S"
+        },
+        "seeds_search": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 3,
+          "gt": 0,
+          "title": "Seeds Search"
+        },
+        "seeds_final": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 5,
+          "gt": 0,
+          "title": "Seeds Final"
+        },
+        "weights_a": {
+          "$ref": "#/$defs/WeightsA"
+        },
+        "weights_b": {
+          "$ref": "#/$defs/WeightsB"
+        }
+      },
+      "title": "OptimizerSettings",
+      "type": "object"
+    },
+    "Routes": {
+      "additionalProperties": false,
+      "properties": {
+        "margin": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 0.3,
+          "ge": 0,
+          "le": 0.5,
+          "title": "Margin"
+        },
+        "max_routes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 5,
+          "gt": 0,
+          "title": "Max Routes"
+        },
+        "theta": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 0.02,
+          "ge": 0,
+          "title": "Theta"
+        },
+        "transfer_penalty_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 300,
+          "ge": 0,
+          "title": "Transfer Penalty S"
+        },
+        "diversity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 0.2,
+          "ge": 0,
+          "le": 1,
+          "title": "Diversity"
+        },
+        "classes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 8,
+          "gt": 0,
+          "title": "Classes"
+        }
+      },
+      "title": "Routes",
+      "type": "object"
+    },
+    "Schedule": {
+      "additionalProperties": false,
+      "properties": {
+        "period_len_min": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 60,
+          "gt": 0,
+          "title": "Period Len Min"
+        },
+        "headways": {
+          "additionalProperties": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "$ref": "#/$defs/TaggedNumber"
+                }
+              ],
+              "gt": 0
+            },
+            "type": "array"
+          },
+          "title": "Headways",
+          "type": "object"
+        }
+      },
+      "title": "Schedule",
+      "type": "object"
+    },
+    "Segment": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "title": "To",
+          "type": "string"
+        },
+        "length_m": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "$ref": "#/$defs/TaggedNumber"
+                }
+              ],
+              "gt": 0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length M"
+        },
+        "run_time_s": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "$ref": "#/$defs/TaggedNumber"
+                }
+              ],
+              "gt": 0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run Time S"
+        },
+        "max_speed_mps": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "$ref": "#/$defs/TaggedNumber"
+                }
+              ],
+              "gt": 0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Speed Mps"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Segment",
+      "type": "object"
+    },
+    "ServiceTargets": {
+      "additionalProperties": false,
+      "properties": {
+        "max_denied_share": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 0.02,
+          "ge": 0,
+          "le": 1,
+          "title": "Max Denied Share"
+        }
+      },
+      "title": "ServiceTargets",
+      "type": "object"
+    },
+    "Settings": {
+      "additionalProperties": false,
+      "properties": {
+        "day_start_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 18000,
+          "ge": 0,
+          "title": "Day Start S"
+        },
+        "day_end_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 90000,
+          "gt": 0,
+          "title": "Day End S"
+        },
+        "group_step_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 120,
+          "gt": 0,
+          "title": "Group Step S"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 42,
+          "ge": 0,
+          "title": "Seed"
+        },
+        "demand_noise": {
+          "default": true,
+          "title": "Demand Noise",
+          "type": "boolean"
+        },
+        "od_beta": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 1,
+          "ge": 0,
+          "title": "Od Beta"
+        },
+        "routes": {
+          "$ref": "#/$defs/Routes"
+        },
+        "delays": {
+          "$ref": "#/$defs/Delays"
+        },
+        "optimizer": {
+          "$ref": "#/$defs/OptimizerSettings"
+        },
+        "service_targets": {
+          "$ref": "#/$defs/ServiceTargets"
+        }
+      },
+      "title": "Settings",
+      "type": "object"
+    },
+    "Station": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "x": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "ge": 0,
+          "le": 1000,
+          "title": "X"
+        },
+        "y": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "ge": 0,
+          "le": 1000,
+          "title": "Y"
+        },
+        "platform_doors": {
+          "default": false,
+          "title": "Platform Doors",
+          "type": "boolean"
+        },
+        "door_open_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 4,
+          "ge": 0,
+          "title": "Door Open S"
+        },
+        "door_close_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 6,
+          "ge": 0,
+          "title": "Door Close S"
+        },
+        "dwell_base_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 20,
+          "ge": 0,
+          "title": "Dwell Base S"
+        },
+        "boarding_rate_pps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 6,
+          "gt": 0,
+          "title": "Boarding Rate Pps"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "x",
+        "y"
+      ],
+      "title": "Station",
+      "type": "object"
+    },
+    "TaggedNumber": {
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "source": {
+          "enum": [
+            "data",
+            "estimate",
+            "assumption",
+            "user"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "source"
+      ],
+      "title": "TaggedNumber",
+      "type": "object"
+    },
+    "Train": {
+      "additionalProperties": false,
+      "properties": {
+        "capacity": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 800,
+          "gt": 0,
+          "title": "Capacity"
+        },
+        "max_speed_mps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 20,
+          "gt": 0,
+          "title": "Max Speed Mps"
+        },
+        "acceleration_mps2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 1,
+          "gt": 0,
+          "title": "Acceleration Mps2"
+        },
+        "deceleration_mps2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 1,
+          "gt": 0,
+          "title": "Deceleration Mps2"
+        },
+        "turnaround_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 120,
+          "ge": 0,
+          "title": "Turnaround S"
+        }
+      },
+      "title": "Train",
+      "type": "object"
+    },
+    "Transfer": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "title": "To",
+          "type": "string"
+        },
+        "walk_time_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 180,
+          "ge": 0,
+          "title": "Walk Time S"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Transfer",
+      "type": "object"
+    },
+    "WeightsA": {
+      "additionalProperties": false,
+      "properties": {
+        "wait": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 1,
+          "ge": 0,
+          "title": "Wait"
+        },
+        "denied": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 120,
+          "ge": 0,
+          "title": "Denied"
+        },
+        "queue": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 30,
+          "ge": 0,
+          "title": "Queue"
+        }
+      },
+      "title": "WeightsA",
+      "type": "object"
+    },
+    "WeightsB": {
+      "additionalProperties": false,
+      "properties": {
+        "empty": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 0.7,
+          "ge": 0,
+          "title": "Empty"
+        },
+        "fleet": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/TaggedNumber"
+            }
+          ],
+          "default": 0.3,
+          "ge": 0,
+          "title": "Fleet"
+        }
+      },
+      "title": "WeightsB",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    },
+    "lines": {
+      "items": {
+        "$ref": "#/$defs/Line"
+      },
+      "minItems": 1,
+      "title": "Lines",
+      "type": "array"
+    },
+    "stations": {
+      "items": {
+        "$ref": "#/$defs/Station"
+      },
+      "minItems": 2,
+      "title": "Stations",
+      "type": "array"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/Segment"
+      },
+      "minItems": 1,
+      "title": "Segments",
+      "type": "array"
+    },
+    "transfers": {
+      "items": {
+        "$ref": "#/$defs/Transfer"
+      },
+      "title": "Transfers",
+      "type": "array"
+    },
+    "train": {
+      "$ref": "#/$defs/Train"
+    },
+    "fleet": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "$ref": "#/$defs/TaggedNumber"
+        }
+      ],
+      "ge": 0,
+      "title": "Fleet"
+    },
+    "demand": {
+      "items": {
+        "$ref": "#/$defs/Demand"
+      },
+      "title": "Demand",
+      "type": "array"
+    },
+    "od_matrix": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/OD"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Od Matrix"
+    },
+    "schedule": {
+      "$ref": "#/$defs/Schedule"
+    },
+    "fleet_assignment": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "$ref": "#/$defs/TaggedNumber"
+              }
+            ],
+            "ge": 0
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Fleet Assignment"
+    },
+    "settings": {
+      "$ref": "#/$defs/Settings"
+    }
+  },
+  "required": [
+    "meta",
+    "lines",
+    "stations",
+    "segments",
+    "fleet",
+    "demand"
+  ],
+  "title": "Network",
+  "type": "object"
+}
