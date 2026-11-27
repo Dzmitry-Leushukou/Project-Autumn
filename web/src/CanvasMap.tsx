@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Network, Trajectory } from "./model";
+import type { ConnectionSelection } from "./topologyEditing";
 import { value } from "./model";
-import { before, queueIndex, queueAt } from "./replay";
+import {
+  queueIndex,
+  queueAt,
+  trainIndex,
+  trainAt,
+  passengerCount,
+} from "./replay";
 type Props = {
   network: Network;
   trajectory: Trajectory | null;
@@ -11,6 +18,9 @@ type Props = {
   editing: boolean;
   tool: string;
   onMapClick: (x: number, y: number, station?: string) => void;
+  onConnectionDelete: (kind: "segment" | "transfer", index: number) => void;
+  onConnectionSelect: (kind: "segment" | "transfer", index: number) => void;
+  selectedConnection: ConnectionSelection | null;
   selected: string | null;
   heat: string;
 };
@@ -20,17 +30,12 @@ export default function CanvasMap(props: Props) {
     latest = useRef(props),
     geometry = useRef<any>(null),
     hits = useRef<any[]>([]),
+    pointer = useRef<{ x: number; y: number } | null>(null),
     frames = useRef<number[]>([]);
   const [tooltip, setTooltip] = useState<any>(null);
   latest.current = props;
   const indexed = useMemo(() => {
-    const trains = new Map<number, { trips: any[]; stops: any[] }>();
-    for (const kind of ["trips", "stops"] as const)
-      for (const item of props.trajectory?.[kind] ?? []) {
-        if (!trains.has(item.train))
-          trains.set(item.train, { trips: [], stops: [] });
-        trains.get(item.train)![kind].push(item);
-      }
+    const trains = trainIndex(props.trajectory);
     const queues = queueIndex(props.trajectory).stations;
     return { trains, queues };
   }, [props.trajectory]);
@@ -40,6 +45,7 @@ export default function CanvasMap(props: Props) {
     let request = 0,
       last = performance.now(),
       lastReport = 0,
+      lastTooltip = 0,
       width = 0,
       height = 0;
     const node = canvas.current!,
@@ -66,7 +72,7 @@ export default function CanvasMap(props: Props) {
         );
         if (clock.time >= p.trajectory.meta.simulation_end_s)
           clock.playing = false;
-        if (stamp - lastReport > 100) {
+        if (stamp - lastReport > 100 || !clock.playing) {
           p.onTime(clock.time);
           lastReport = stamp;
         }
@@ -139,6 +145,24 @@ export default function CanvasMap(props: Props) {
         ctx.stroke();
       }
       ctx.setLineDash([]);
+      if (p.editing && p.selectedConnection) {
+        const { kind, index } = p.selectedConnection;
+        const edge = (
+          kind === "segment" ? p.network.segments : p.network.transfers
+        )[index];
+        const from = edge && stations.get(edge.from),
+          to = edge && stations.get(edge.to);
+        if (from && to) {
+          const a = project(from),
+            b = project(to);
+          ctx.beginPath();
+          ctx.strokeStyle = "rgba(180,145,53,.65)";
+          ctx.lineWidth = 11;
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
       const targets: any[] = [];
       for (const s of p.network.stations) {
         const a = project(s),
@@ -178,14 +202,14 @@ export default function CanvasMap(props: Props) {
       }
       if (p.trajectory && !p.editing)
         for (const [tid, records] of indexRef.current.trains) {
-          const trip =
-              records.trips[before(records.trips, clock.time, "departure")],
-            stop = records.stops[before(records.stops, clock.time, "arrival")];
+          const state = trainAt(records, clock.time),
+            trip = state.phase === "trip" ? state.item : null,
+            stop = state.phase === "stop" ? state.item : null;
           let a: any = null,
             item: any = null,
             next = "",
             delay = 0;
-          if (trip && (trip.arrival === null || clock.time < trip.arrival)) {
+          if (trip) {
             const from = stations.get(trip.from),
               to = stations.get(trip.to);
             if (from && to) {
@@ -204,10 +228,7 @@ export default function CanvasMap(props: Props) {
               next = to.name;
               delay = Math.max(0, clock.time - trip.ready);
             }
-          } else if (
-            stop &&
-            (stop.departure === null || clock.time < stop.departure)
-          ) {
+          } else if (stop) {
             const station = stations.get(stop.station);
             if (station) {
               a = project(station);
@@ -215,7 +236,7 @@ export default function CanvasMap(props: Props) {
               a.y += 5;
               item = stop;
               next = station.name;
-              delay = stop.delay_s;
+              delay = state.delay;
             }
           }
           if (!a || !item) continue;
@@ -234,11 +255,16 @@ export default function CanvasMap(props: Props) {
           targets.push({
             ...a,
             type: "train",
+            id: tid,
             name: `Поезд ${tid + 1} · ${line?.name}`,
             load: item.load,
             capacity: value(p.network.train.capacity, 800),
             next,
             delay,
+            locationLabel: stop ? "На станции" : "Следующая станция",
+            waitLabel: stop
+              ? "Ждёт свободный перегон"
+              : "Ждёт свободную платформу",
           });
         }
       if (p.heat === "blocking")
@@ -262,6 +288,43 @@ export default function CanvasMap(props: Props) {
           ctx.setLineDash([]);
         }
       hits.current = targets;
+      if (stamp - lastTooltip > 100) {
+        lastTooltip = stamp;
+        const cursor = pointer.current,
+          hit =
+            cursor &&
+            [...targets]
+              .reverse()
+              .find((h) => Math.hypot(h.x - cursor.x, h.y - cursor.y) < 12),
+          nextTooltip =
+            hit && cursor
+              ? {
+                  ...hit,
+                  left: Math.max(8, Math.min(cursor.x + 16, width - 230)),
+                  top: Math.max(8, cursor.y - 70),
+                }
+              : null;
+        setTooltip((old: any) => {
+          if (!old || !nextTooltip)
+            return old === nextTooltip ? old : nextTooltip;
+          return [
+            "type",
+            "id",
+            "name",
+            "waiting",
+            "load",
+            "capacity",
+            "next",
+            "delay",
+            "locationLabel",
+            "waitLabel",
+            "left",
+            "top",
+          ].every((key) => old[key] === nextTooltip[key])
+            ? old
+            : nextTooltip;
+        });
+      }
       frames.current.push(elapsed * 1000);
       if (frames.current.length > 120) frames.current.shift();
       (window as any).__metroFrameMs = frames.current;
@@ -277,6 +340,19 @@ export default function CanvasMap(props: Props) {
     const r = canvas.current!.getBoundingClientRect();
     return { x: event.clientX - r.left, y: event.clientY - r.top };
   };
+  const selection = props.selectedConnection;
+  const selectedEdge =
+    selection &&
+    (selection.kind === "segment"
+      ? props.network.segments
+      : props.network.transfers)[selection.index];
+  const nameOf = (id: string) =>
+    props.network.stations.find((station) => station.id === id)?.name ?? id;
+  const selectionLabel = selectedEdge
+    ? `${selection!.kind === "segment" ? "Перегон" : "Переход"} ${nameOf(selectedEdge.from)} — ${nameOf(selectedEdge.to)}`
+    : props.selected
+      ? `Станция ${nameOf(props.selected)}`
+      : null;
   return (
     <div
       className={`map-host ${props.editing ? "editing" : ""}`}
@@ -286,25 +362,14 @@ export default function CanvasMap(props: Props) {
       <canvas
         ref={canvas}
         aria-label="Карта сети метро"
+        tabIndex={props.editing ? 0 : undefined}
         onMouseMove={(e) => {
-          const p = point(e),
-            hit = [...hits.current]
-              .reverse()
-              .find((h) => Math.hypot(h.x - p.x, h.y - p.y) < 12);
-          setTooltip(
-            hit
-              ? {
-                  ...hit,
-                  left: Math.max(
-                    8,
-                    Math.min(p.x + 16, (geometry.current?.width ?? 1000) - 230),
-                  ),
-                  top: Math.max(8, p.y - 70),
-                }
-              : null,
-          );
+          pointer.current = point(e);
         }}
-        onMouseLeave={() => setTooltip(null)}
+        onMouseLeave={() => {
+          pointer.current = null;
+          setTooltip(null);
+        }}
         onClick={(e) => {
           if (!props.editing) return;
           const p = point(e),
@@ -314,6 +379,53 @@ export default function CanvasMap(props: Props) {
             (h) =>
               h.type === "station" && Math.hypot(h.x - p.x, h.y - p.y) < 15,
           );
+          if ((props.tool === "delete" || props.tool === "select") && !hit) {
+            const project = (id: string) => {
+              const station = props.network.stations.find((s) => s.id === id);
+              return station
+                ? {
+                    x: g.ox + value(station.x) * g.scale,
+                    y: g.oy + value(station.y) * g.scale,
+                  }
+                : null;
+            };
+            const edges = (["segment", "transfer"] as const)
+              .flatMap((kind) =>
+                (kind === "segment"
+                  ? props.network.segments
+                  : props.network.transfers
+                ).map((edge, index) => {
+                  const a = project(edge.from),
+                    b = project(edge.to);
+                  if (!a || !b) return { kind, index, distance: Infinity };
+                  const dx = b.x - a.x,
+                    dy = b.y - a.y;
+                  const t = Math.max(
+                    0,
+                    Math.min(
+                      1,
+                      ((p.x - a.x) * dx + (p.y - a.y) * dy) /
+                        (dx * dx + dy * dy || 1),
+                    ),
+                  );
+                  return {
+                    kind,
+                    index,
+                    distance: Math.hypot(
+                      p.x - a.x - t * dx,
+                      p.y - a.y - t * dy,
+                    ),
+                  };
+                }),
+              )
+              .sort((a, b) => a.distance - b.distance);
+            if (edges[0]?.distance <= 10) {
+              if (props.tool === "delete")
+                props.onConnectionDelete(edges[0].kind, edges[0].index);
+              else props.onConnectionSelect(edges[0].kind, edges[0].index);
+            } else if (props.tool === "select") props.onMapClick(0, 0);
+            return;
+          }
           props.onMapClick(
             Math.max(0, Math.min(1000, (p.x - g.ox) / g.scale)),
             Math.max(0, Math.min(1000, (p.y - g.oy) / g.scale)),
@@ -323,7 +435,6 @@ export default function CanvasMap(props: Props) {
       />
       {!props.network.stations.length && (
         <div className="map-empty">
-          <span>01 / ВАША ТОПОЛОГИЯ</span>
           <h2>Начните со станции</h2>
           <p>
             Выберите «Станции» и нажмите на поле.
@@ -335,26 +446,39 @@ export default function CanvasMap(props: Props) {
       {tooltip && (
         <div
           className="map-tooltip"
+          role="tooltip"
           style={{ left: tooltip.left, top: tooltip.top }}
         >
           <strong>{tooltip.name}</strong>
           {tooltip.type === "train" ? (
             <>
               <span>
-                Загрузка {tooltip.load.toFixed(1)} / {tooltip.capacity}
+                Загрузка ≈{passengerCount(tooltip.load)} / {tooltip.capacity}
               </span>
-              <span>Далее: {tooltip.next}</span>
-              <span>Задержка {tooltip.delay.toFixed(1)} с</span>
+              <span>
+                {tooltip.locationLabel}: {tooltip.next}
+              </span>
+              {tooltip.delay > 0 && (
+                <span>
+                  {tooltip.waitLabel}: {tooltip.delay.toFixed(1)} с
+                </span>
+              )}
             </>
           ) : (
-            <span>Ожидают {tooltip.waiting.toFixed(1)} пасс.</span>
+            <span>Ожидают ≈{passengerCount(tooltip.waiting)} пасс.</span>
           )}
         </div>
       )}
-      <div className="map-note">
+      <div className="map-note" aria-live="polite">
         {props.editing
-          ? "5 м / ед. · Синтетическая сеть"
-          : "Модельные направления поездок · дробные группы"}
+          ? props.tool === "select"
+            ? selectionLabel
+              ? `${selectionLabel}. Delete — удалить, Ctrl+Z — отменить.`
+              : "Выберите станцию, перегон или переход. Delete — удалить, Ctrl+Z — отменить."
+            : props.tool === "delete"
+              ? "Нажмите станцию, перегон или переход для удаления. Ctrl+Z — отмена."
+              : "Схема редактирования: расстояния задаются в свойствах перегонов"
+          : "Пассажиры показаны приблизительно; направление поездки выбирает модель"}
       </div>
     </div>
   );

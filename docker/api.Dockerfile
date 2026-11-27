@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.lock.txt
 
 RUN useradd --create-home --uid 10001 metro
 COPY core/ ./core/
+COPY models/ ./models/
 COPY data_io/ ./data_io/
 COPY optimizer/ ./optimizer/
 COPY api/ ./api/

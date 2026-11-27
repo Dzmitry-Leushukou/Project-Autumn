@@ -7,9 +7,9 @@ from pathlib import Path
 from threading import Event, Lock
 from time import perf_counter
 from uuid import uuid4
-from core.simulation import Simulator
+from models.discrete_events import Simulator
 from data_io.network import read_network
-from optimizer.nsga2 import optimize
+from models.nsga2 import optimize
 from optimizer.evaluation import Cancelled
 
 ROOT = Path(__file__).resolve().parents[1]

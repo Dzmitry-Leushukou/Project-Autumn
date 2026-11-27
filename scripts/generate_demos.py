@@ -4,6 +4,7 @@ import math
 from pathlib import Path
 from data_io.network import write_network
 from data_io.schema import Network
+from models.demand_profile import demand_multiplier
 
 ROOT = Path(__file__).resolve().parents[1]
 COLORS = ["#C65B49", "#397DAD", "#B49135", "#9670AA"]
@@ -46,11 +47,7 @@ def build(name, paths, loops=(), duration=72000):
     for i, sid in enumerate(ids):
         for minute in range(300, 300 + math.ceil(duration / 60), 15):
             t = minute + 7.5
-            multiplier = (
-                0.25
-                + 0.75 * math.exp(-((t - 510) ** 2) / (2 * 75**2))
-                + 0.9 * math.exp(-((t - 1080) ** 2) / (2 * 90**2))
-            )
+            multiplier = demand_multiplier(t)
             demand.append(
                 {
                     "station": sid,

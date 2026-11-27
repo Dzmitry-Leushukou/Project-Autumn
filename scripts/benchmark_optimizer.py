@@ -8,7 +8,7 @@ import platform
 from time import perf_counter
 
 from data_io.network import read_network, require_network
-from optimizer.nsga2 import optimize
+from models.nsga2 import optimize
 
 
 def main():

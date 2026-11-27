@@ -149,7 +149,7 @@ def test_sparse_metrics_keep_identity_and_missing_headways_are_not_zero():
 
 
 def test_deadline_returns_only_candidates_with_complete_final_seeds(monkeypatch):
-    import optimizer.nsga2 as module
+    import models.nsga2 as module
     from optimizer.evaluation import Evaluator, DeadlineExceeded
 
     class StopAfterBaseline(Evaluator):

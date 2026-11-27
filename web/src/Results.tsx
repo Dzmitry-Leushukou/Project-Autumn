@@ -1,3 +1,7 @@
+import { useState } from "react";
+import type { Network } from "./model";
+import { downloadComparison } from "./exportComparison";
+
 export const fmt = (x: number, d = 0) =>
   new Intl.NumberFormat("ru-RU", { maximumFractionDigits: d }).format(x ?? 0);
 export function Pareto({ result }: { result: any }) {
@@ -14,7 +18,10 @@ export function Pareto({ result }: { result: any }) {
     <figure className="pareto">
       <figcaption>
         Фронт Парето{" "}
-        <small>Ни одна точка не улучшает обе цели одновременно</small>
+        <small>
+          Найденные компромиссы: левее и ниже — лучше. Точки 1–4 соответствуют
+          карточкам.
+        </small>
       </figcaption>
       <svg
         viewBox="0 0 760 285"
@@ -72,16 +79,26 @@ export function Pareto({ result }: { result: any }) {
           Б · Пустые места и парк ↑
         </text>
       </svg>
+      <p className="chart-help">
+        Ось А объединяет ожидание, отказы в посадке и очереди. Ось Б — пустые
+        места и использование парка. Это взвешенные оценки, не минуты и не
+        проценты; веса задаются в «Параметрах поиска». Исходное расписание может
+        быть хуже найденных точек по обеим осям.
+      </p>
     </figure>
   );
 }
 export function Options({
   result,
   onApply,
+  network,
 }: {
   result: any;
   onApply: (o: any) => void;
+  network: Network;
 }) {
+  const [exporting, setExporting] = useState<number | null>(null),
+    [exportError, setExportError] = useState("");
   return (
     <>
       <div className="option-grid">
@@ -90,35 +107,66 @@ export function Options({
             key={o.name}
             className={`option ${i === 2 ? "recommended" : ""}`}
           >
-            <span className="option-number">
-              0{i + 1}
-              {i === 2 ? " / БАЛАНС" : ""}
-            </span>
+            <span className="option-number">{i + 1}</span>
             <h3>{o.name}</h3>
             <b>
               {fmt(o.metrics.W, 1)} <small>с ожидания</small>
             </b>
             <p>
               Пустые места {fmt(o.metrics.E * 100, 1)}%<br />
-              Поездов {fmt(o.metrics.used_trains, 1)}
-              <br />Δ ожидания {fmt(
-                o.metrics.W - result.baseline.metrics.W,
-                1,
-              )}{" "}
-              с<br />
-              Разброс W ±{fmt(o.std.W, 1)} с
+              Использовано поездов: {fmt(o.metrics.used_trains, 1)} в среднем
+              <br />
+              {Math.abs(o.metrics.W - result.baseline.metrics.W) < 0.05
+                ? "Ожидание как в исходном варианте"
+                : `Ожидание ${o.metrics.W < result.baseline.metrics.W ? "меньше" : "больше"} на ${fmt(Math.abs(o.metrics.W - result.baseline.metrics.W), 1)} с`}
+              <br />
+              Разброс ожидания между прогонами: {fmt(o.std.W, 1)} с
             </p>
             <button data-testid={`option-${i}`} onClick={() => onApply(o)}>
               Запустить вариант ↗
             </button>
+            {i !== 3 && (
+              <button
+                data-testid={`export-option-${i}`}
+                disabled={exporting !== null}
+                onClick={async () => {
+                  setExporting(i);
+                  setExportError("");
+                  try {
+                    await downloadComparison(network, result.baseline, o);
+                  } catch (error: any) {
+                    setExportError(
+                      `Не удалось сохранить Excel: ${error.message}`,
+                    );
+                  } finally {
+                    setExporting(null);
+                  }
+                }}
+              >
+                {exporting === i ? "Готовим Excel…" : "↓ Сравнить в Excel"}
+              </button>
+            )}
           </article>
         ))}
       </div>
+      {exportError && (
+        <p className="message error" role="alert">
+          {exportError}
+        </p>
+      )}
+      <p className="result-note">
+        Показатели карточек усреднены по нескольким случайным прогонам. Поэтому
+        среднее число использованных поездов может быть дробным. После выбора
+        карта показывает один прогон, и числа могут немного отличаться.
+      </p>
       <Pareto result={result} />
       <p className="result-note">
-        {result.generations_completed} поколений · {result.evaluations}{" "}
-        seed-прогонов · {fmt(result.compute_seconds, 1)} с ·{" "}
-        {result.od_source === "model" ? "OD — модельные" : "OD — данные"} ·{" "}
+        Завершено поколений: {result.generations_completed}. Расчётов симуляции:{" "}
+        {result.evaluations}. Время поиска: {fmt(result.compute_seconds, 1)} с.{" "}
+        {result.od_source === "model"
+          ? "направления поездок рассчитаны моделью"
+          : "направления поездок из файла"}{" "}
+        ·{" "}
         {result.stop_reason === "time_budget"
           ? "остановка по бюджету времени"
           : result.stop_reason === "evaluation_budget"

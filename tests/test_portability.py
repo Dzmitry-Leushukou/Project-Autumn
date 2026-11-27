@@ -19,7 +19,7 @@ def test_independent_topologies_without_core_changes(relative):
 
 def test_core_has_no_city_adapter_imports():
     root = Path(__file__).resolve().parents[1]
-    for file in (root / "core").glob("*.py"):
+    for file in [*(root / "core").glob("*.py"), *(root / "models").glob("*.py")]:
         text = file.read_text(encoding="utf-8").lower()
         assert "london" not in text
         assert "tfl" not in text

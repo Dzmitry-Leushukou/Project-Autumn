@@ -26,8 +26,12 @@ async function configureSearch(page: Page) {
   await page.getByText("Параметры поиска", { exact: true }).click();
   await page.getByLabel("Популяция", { exact: true }).fill("4");
   await page.getByLabel("Поколения", { exact: true }).fill("1");
-  await page.getByLabel("Seed при поиске", { exact: true }).fill("1");
-  await page.getByLabel("Seed итоговой оценки", { exact: true }).fill("1");
+  await page
+    .getByLabel("Прогонов на вариант при поиске", { exact: true })
+    .fill("1");
+  await page
+    .getByLabel("Прогонов для итоговой оценки", { exact: true })
+    .fill("1");
   await page.getByText("Параметры поиска", { exact: true }).click();
 }
 test("demo: simulate, edit, optimize, replay and compare", async ({ page }) => {
@@ -42,7 +46,7 @@ test("demo: simulate, edit, optimize, replay and compare", async ({ page }) => {
   });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Город в движении" }),
+    page.getByRole("heading", { name: "Симуляция", exact: true }),
   ).toBeVisible();
   await page.getByLabel("Демо-сеть").selectOption("b_transfer");
   await page.getByRole("button", { name: "▶ Запустить симуляцию" }).click();
@@ -51,9 +55,11 @@ test("demo: simulate, edit, optimize, replay and compare", async ({ page }) => {
   await page
     .getByLabel("Интервал Линия 1 период 1", { exact: true })
     .fill("1200");
+  await page.getByRole("button", { name: "Конструктор", exact: true }).click();
   await page
     .getByLabel("Чувствительность ко времени θ", { exact: true })
     .fill("0.03");
+  await page.getByRole("button", { name: "▶ Запустить симуляцию" }).click();
   await expect(page.locator("div[role=status]")).toContainText("Прогон готов");
   await configureSearch(page);
   await page
@@ -144,14 +150,15 @@ test("constructor: build from clicks, doors, demand, optimize and run", async ({
   await page.getByRole("button", { name: "Применить спрос к станции" }).click();
   await page.getByRole("button", { name: "Ветка", exact: true }).click();
   for (const position of positions) await canvas.click({ position });
-  await configureSearch(page);
-  await expect(
-    page.getByRole("button", { name: "Оптимизировать", exact: true }),
-  ).toBeEnabled();
   await page.screenshot({
     path: path.join(screenshots, "03-constructor.png"),
     fullPage: true,
   });
+  await page.getByRole("button", { name: "Симуляция", exact: true }).click();
+  await configureSearch(page);
+  await expect(
+    page.getByRole("button", { name: "Оптимизировать", exact: true }),
+  ).toBeEnabled();
   await page
     .getByRole("button", { name: "Оптимизировать", exact: true })
     .click();
@@ -283,7 +290,7 @@ test("queue panel and station tooltip agree between minute samples and after rew
     await expect(waiting).toHaveText(String(expected));
     await canvas.hover({ position });
     await expect(page.locator(".map-tooltip")).toContainText(
-      `Ожидают ${expected.toFixed(1)}`,
+      `Ожидают ≈${expected}`,
     );
     await canvas.hover({ position: { x: 10, y: 10 } });
   }

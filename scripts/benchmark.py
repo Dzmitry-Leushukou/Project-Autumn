@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from time import perf_counter
 import platform
-from core.simulation import Simulator
+from models.discrete_events import Simulator
 from data_io.network import read_network, require_network
 from scripts.generate_demos import build, assumed
 

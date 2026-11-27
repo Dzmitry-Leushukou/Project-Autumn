@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 from time import perf_counter
-from core.simulation import Simulator
+from models.discrete_events import Simulator
 from data_io.network import require_network, read_network
-from optimizer.nsga2 import optimize
+from models.nsga2 import optimize
 
 
 def main():

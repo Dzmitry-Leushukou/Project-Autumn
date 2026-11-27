@@ -108,6 +108,41 @@ def test_zero_service_keeps_demand_and_excludes_routes():
     assert sum(sim.waiting.values()) == pytest.approx(sim.appeared)
 
 
+@pytest.mark.parametrize("mode", ["shared", "walk", "ring", "unserved"])
+def test_direction_replay_reconciles_every_queue_change(mode):
+    from collections import defaultdict
+
+    paths = [["A", "B", "C"], ["A", "B", "D"]] if mode == "shared" else [["A", "B", "C"]]
+    net = small(paths, loops=(0,) if mode == "ring" else (), fleet=0 if mode == "unserved" else 8)
+    if mode == "walk":
+        doc = build("Walk replay", [["A", "B"], ["C", "D"]], duration=1200)
+        doc["transfers"] = [{"from": "B", "to": "C", "walk_time_s": 40}]
+        doc["od_matrix"] = [{"origin": "A", "destination": "D", "start_min": 300, "len_min": 10, "trips": 30}]
+        net = require_network(doc)
+    net.settings.demand_noise = False
+    result = Simulator(net, check_invariants=True).run()
+    trajectory = result["trajectory"]
+    changes = defaultdict(lambda: [defaultdict(float), defaultdict(float)])
+    for event in trajectory["queue_events"]:
+        changes[event["time"]][0][event["station"]] += event["delta"]
+    for event in trajectory["queue_directions"]:
+        changes[event["time"]][1][(event["station"], event["towards"])] += event["delta"]
+    totals, directions = defaultdict(float), defaultdict(float)
+    for _, (station_changes, direction_changes) in sorted(changes.items()):
+        for key, delta in station_changes.items():
+            totals[key] += delta
+        for key, delta in direction_changes.items():
+            directions[key] += delta
+        assert min(directions.values(), default=0) >= -1e-7
+        for station, total in totals.items():
+            assert total == pytest.approx(sum(count for (s, _), count in directions.items() if s == station), abs=1e-7)
+    # Common-service passengers belong to one next-station queue, not one per line.
+    if mode == "unserved":
+        assert all(towards is None for _, towards in directions)
+    assert len(trajectory["trains"]) == sum(result["assignment"].values())
+    assert all(s["ready"] >= s["arrival"] for s in trajectory["stops"])
+
+
 def test_ring_boarding_follows_selected_path_not_first_opposite_train():
     from data_io.schema import OD
 

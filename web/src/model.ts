@@ -1,3 +1,7 @@
+import { demandMultiplier } from "../../models/demand_profile";
+import { value, tagged } from "./numeric";
+export { value, tagged } from "./numeric";
+
 export type Network = {
   meta: {
     name: string;
@@ -23,12 +27,19 @@ export type Trajectory = {
   stops: any[];
   series: any[];
   queue_events: any[];
+  queue_directions?: {
+    time: number;
+    station: string;
+    towards: string | null;
+    delta: number;
+  }[];
+  trains?: {
+    train: number;
+    line: string;
+    station: string;
+    direction: number;
+  }[];
 };
-export const value = (x: any, fallback = 0): number =>
-  typeof x === "object" && x !== null && "value" in x
-    ? x.value
-    : (x ?? fallback);
-export const tagged = (x: number) => ({ value: x, source: "user" });
 export const source = (x: any) =>
   x === undefined
     ? "допущение"
@@ -147,8 +158,13 @@ export function headways(n: Network): Record<string, any[]> {
     ]),
   );
 }
-export function clock(t: number) {
-  return `${String(Math.floor(t / 3600)).padStart(2, "0")}:${String(Math.floor((t % 3600) / 60)).padStart(2, "0")}`;
+export function dayLabel(t: number) {
+  const days = Math.floor(t / 86400);
+  return days === 0 ? "" : days === 1 ? "следующий день" : `через ${days} дн.`;
+}
+export function clock(t: number, includeDay = true) {
+  const face = `${String(Math.floor(t / 3600) % 24).padStart(2, "0")}:${String(Math.floor((t % 3600) / 60)).padStart(2, "0")}`;
+  return includeDay && dayLabel(t) ? `${face} (${dayLabel(t)})` : face;
 }
 export function demandProfile(
   n: Network,
@@ -163,14 +179,7 @@ export function demandProfile(
     t += 15
   ) {
     const mid = t + 7.5;
-    const morning = Math.exp(-((mid - 510) ** 2) / (2 * 75 ** 2)),
-      evening = Math.exp(-((mid - 1080) ** 2) / (2 * 90 ** 2));
-    const m =
-      profile === "flat"
-        ? 1
-        : profile === "morning"
-          ? 0.25 + 0.9 * morning
-          : 0.25 + 0.75 * morning + 0.9 * evening;
+    const m = demandMultiplier(mid, profile);
     rows.push({
       station,
       start_min: t,

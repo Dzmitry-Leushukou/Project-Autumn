@@ -5,8 +5,8 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal
 from data_io.network import validate, apply_overrides, read_network
-from core.physics import allocate_fleet
-from optimizer.train_count import train_count
+from models.fleet import allocate_fleet
+from models.train_count import train_count
 from .service import service
 
 app = FastAPI(title="Metro Lab", version="1.0.0")

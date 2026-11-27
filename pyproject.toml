@@ -16,7 +16,10 @@ dependencies = [
 test = ["pytest==9.0.1", "httpx==0.28.1"]
 
 [tool.setuptools.packages.find]
-include = ["core*", "data_io*", "optimizer*", "api*"]
+include = ["models*", "core*", "data_io*", "optimizer*", "api*"]
+
+[tool.setuptools.package-data]
+models = ["README.md", "*.ts"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

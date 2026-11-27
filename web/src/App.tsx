@@ -1,12 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { queueIndex, queueAt } from "./replay";
+import { removeStation, removeConnection } from "./topologyEditing";
+import type { ConnectionSelection } from "./topologyEditing";
 import CanvasMap from "./CanvasMap";
+import LiveTables from "./LiveTables";
+import DemandEditor from "./DemandEditor";
+import DailyTimeline from "./DailyTimeline";
+import "./demand.css";
+import CountResult from "./CountResult";
+import { durationText, directionText } from "./uiText";
 import Controls, { Badge } from "./Controls";
 import { fmt, Options } from "./Results";
 import type { Network, Trajectory } from "./model";
 import {
   api,
   clock,
+  dayLabel,
   demandProfile,
   download,
   emptyNetwork,
@@ -17,13 +26,25 @@ import {
   value,
 } from "./model";
 
+const MathModels = lazy(() => import("./MathModels"));
+type EditorSnapshot = {
+  network: Network;
+  selected: string | null;
+  connection: ConnectionSelection | null;
+  activeLine: string;
+  transferFrom: string | null;
+};
+
 export default function App() {
   const [catalogue, setCatalogue] = useState<any[]>([]),
     [network, setNetwork] = useState<Network | null>(null),
     [demo, setDemo] = useState("b_transfer"),
     [editing, setEditing] = useState(false),
-    [tool, setTool] = useState("station"),
+    [modelsOpen, setModelsOpen] = useState(false),
+    [tool, setTool] = useState("select"),
     [selected, setSelected] = useState<string | null>(null),
+    [selectedConnection, setSelectedConnection] =
+      useState<ConnectionSelection | null>(null),
     [activeLine, setActiveLine] = useState("L1"),
     [transferFrom, setTransferFrom] = useState<string | null>(null);
   const [report, setReport] = useState<any>(null),
@@ -44,6 +65,13 @@ export default function App() {
     [countValue, setCountValue] = useState(180),
     [period, setPeriod] = useState(0),
     [showAll, setShowAll] = useState(false);
+  const [resultsStale, setResultsStale] = useState(false);
+  const history = useRef<EditorSnapshot[]>([]);
+  const [undoDepth, setUndoDepth] = useState(0);
+  const undoRef = useRef(() => {});
+  const deleteSelectedRef = useRef(() => {});
+  const activeView = useRef({ editing, modelsOpen });
+  activeView.current = { editing, modelsOpen };
   const clockRef = useRef({ time, playing, speed }),
     upload = useRef<HTMLInputElement>(null),
     csv = useRef<HTMLInputElement>(null),
@@ -53,27 +81,78 @@ export default function App() {
   clockRef.current.playing = playing;
   clockRef.current.speed = speed;
   const queues = useMemo(() => queueIndex(trajectory), [trajectory]);
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing) return;
+      if (!activeView.current.editing || activeView.current.modelsOpen) return;
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.closest(
+          "input, textarea, select, [contenteditable]:not([contenteditable='false'])",
+        )
+      )
+        return;
+      if (
+        event.key === "Delete" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !event.shiftKey
+      ) {
+        event.preventDefault();
+        if (!event.repeat) deleteSelectedRef.current();
+      } else if (
+        (event.ctrlKey || event.metaKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.code === "KeyZ"
+      ) {
+        event.preventDefault();
+        undoRef.current();
+      }
+    };
+    window.addEventListener("keydown", keydown);
+    return () => window.removeEventListener("keydown", keydown);
+  }, []);
   const setClock = (t: number) => {
     clockRef.current.time = t;
     setTime(t);
   };
   function reset(n: Network, id = "") {
+    history.current = [];
+    setUndoDepth(0);
     version.current++;
     setNetwork(n);
     setDemo(id);
     setMetrics(null);
+    setResultsStale(false);
     setTrajectory(null);
     setResult(null);
     setReport(null);
     setTrainResult(null);
     setPlaying(false);
     setSelected(null);
+    setSelectedConnection(null);
     setActiveLine(n.lines[0]?.id ?? "L1");
     setPeriod(0);
     setClock(setting(n, "day_start_s"));
     setError("");
     setNotice("");
     auto.current = false;
+  }
+  function createNetwork() {
+    reset(emptyNetwork());
+    openConstructor();
+    setTool("station");
+    setTransferFrom(null);
+  }
+  function openConstructor() {
+    setClock(clockRef.current.time);
+    clockRef.current.playing = false;
+    setPlaying(false);
+    auto.current = false;
+    setModelsOpen(false);
+    setEditing(true);
   }
   useEffect(() => {
     let live = true;
@@ -151,10 +230,11 @@ export default function App() {
       const t = await api(`/runs/${run.run_id}/trajectory`);
       if (expected !== version.current) return;
       setMetrics(run.metrics);
+      setResultsStale(false);
       setTrajectory(t);
       setReport(run.validation);
       setClock(setting(document, "day_start_s"));
-      setPlaying(true);
+      setPlaying(!activeView.current.editing && !activeView.current.modelsOpen);
       setNotice(
         run.deadlock
           ? "Взаимная блокировка: расписание недопустимо."
@@ -169,20 +249,102 @@ export default function App() {
   if (!network)
     return (
       <div className="loading">
-        <b>METRO LAB</b>
-        <p>{error || "Подключаем лабораторию…"}</p>
+        <b>Симулятор метро</b>
+        <p>{error || "Загрузка…"}</p>
       </div>
     );
   const n = network;
   const update = (fn: (d: Network) => void, recompute = false) => {
     const d = structuredClone(n);
     fn(d);
+    if (JSON.stringify(d) === JSON.stringify(n)) return;
+    if (editing) {
+      history.current.push({
+        network: structuredClone(n),
+        selected,
+        connection: selectedConnection,
+        activeLine,
+        transferFrom,
+      });
+      if (history.current.length > 100) history.current.shift();
+    } else history.current = [];
+    setUndoDepth(history.current.length);
     setNetwork(d);
     setError("");
     setTrainResult(null);
+    const simulationInputs = (doc: Network) =>
+      JSON.stringify({
+        ...doc,
+        settings: {
+          ...doc.settings,
+          optimizer: undefined,
+          service_targets: undefined,
+        },
+      });
+    if (trajectory && simulationInputs(d) !== simulationInputs(n))
+      setResultsStale(true);
     version.current++;
-    if (recompute) auto.current = true;
+    if (recompute && !editing) auto.current = true;
   };
+  function undo() {
+    if (
+      !editing ||
+      modelsOpen ||
+      busy ||
+      (job && ["queued", "running"].includes(job.status))
+    )
+      return;
+    const previous = history.current.pop();
+    if (!previous) return;
+    version.current++;
+    setNetwork(previous.network);
+    setSelected(previous.selected);
+    setSelectedConnection(previous.connection);
+    setActiveLine(previous.activeLine);
+    setTransferFrom(previous.transferFrom);
+    setUndoDepth(history.current.length);
+    setTrainResult(null);
+    setReport(null);
+    setResultsStale(!!trajectory);
+    setError("");
+    setNotice("");
+    auto.current = false;
+  }
+  undoRef.current = undo;
+  function deleteStation(id: string) {
+    update((d) => removeStation(d, id));
+    setSelected(null);
+    setSelectedConnection(null);
+    setTransferFrom(null);
+    setNotice("");
+  }
+  function deleteConnection(kind: "segment" | "transfer", index: number) {
+    update((d) => removeConnection(d, kind, index));
+    setSelectedConnection(null);
+    setTransferFrom(null);
+    setNotice("");
+  }
+  function deleteSelected() {
+    if (
+      !editing ||
+      modelsOpen ||
+      busy ||
+      (job && ["queued", "running"].includes(job.status))
+    )
+      return;
+    if (selected && n.stations.some((s) => s.id === selected))
+      deleteStation(selected);
+    else if (selectedConnection) {
+      const { kind, index } = selectedConnection;
+      if ((kind === "segment" ? n.segments : n.transfers)[index])
+        deleteConnection(kind, index);
+    }
+  }
+  deleteSelectedRef.current = deleteSelected;
+  function selectConnection(kind: "segment" | "transfer", index: number) {
+    setSelected(null);
+    setSelectedConnection({ kind, index });
+  }
   async function optimize() {
     setError("");
     setResult(null);
@@ -241,8 +403,15 @@ export default function App() {
     });
   }
   function mapClick(x: number, y: number, station?: string) {
+    setSelectedConnection(null);
+    if (tool === "select") {
+      setSelected(station ?? null);
+      return;
+    }
     if (station) setSelected(station);
-    if (tool === "station" && !station) {
+    if (tool === "delete") {
+      if (station) deleteStation(station);
+    } else if (tool === "station" && !station) {
       update((d) => {
         let i = d.stations.length + 1;
         while (d.stations.some((s) => s.id === `S${i}`)) i++;
@@ -311,7 +480,6 @@ export default function App() {
         d.train ??= {};
         d.transfers ??= [];
         reset(d);
-        setEditing(false);
       } catch (e: any) {
         setError(`Файл сети: ${e.message}`);
       }
@@ -350,42 +518,51 @@ export default function App() {
   return (
     <>
       <header className="topbar">
-        <a className="brand" href="/" aria-label="Metro Lab">
-          <span className="brand-mark">
-            M<span>↗</span>
-          </span>
-          <span>
-            METRO LAB<small>Лаборатория городского движения</small>
-          </span>
+        <a className="brand" href="/">
+          Симулятор метро
         </a>
-        <nav>
+        <nav aria-label="Разделы">
           <button
-            className={!editing ? "tab active" : "tab"}
-            onClick={() => setEditing(false)}
+            className={!editing && !modelsOpen ? "tab active" : "tab"}
+            aria-pressed={!editing && !modelsOpen}
+            onClick={() => {
+              setModelsOpen(false);
+              setEditing(false);
+            }}
           >
             Симуляция
           </button>
           <button
-            className={editing ? "tab active" : "tab"}
-            onClick={() => setEditing(true)}
+            className={editing && !modelsOpen ? "tab active" : "tab"}
+            aria-pressed={editing && !modelsOpen}
+            onClick={openConstructor}
           >
             Конструктор
           </button>
+          <button
+            className={modelsOpen ? "tab active" : "tab"}
+            aria-pressed={modelsOpen}
+            onClick={() => {
+              setClock(clockRef.current.time);
+              setPlaying(false);
+              setModelsOpen(true);
+            }}
+          >
+            Матмодели
+          </button>
         </nav>
-        <span className="local-status">
-          ● Локальная модель · seed {setting(n, "seed")}
-        </span>
       </header>
-      <main className="workspace">
+      {modelsOpen && (
+        <Suspense
+          fallback={<main className="workspace">Загрузка формул…</main>}
+        >
+          <MathModels network={n} />
+        </Suspense>
+      )}
+      <main className="workspace" hidden={modelsOpen}>
         <section className="page-heading">
           <div>
-            <div className="eyebrow">МАТЕМАТИЧЕСКОЕ МОДЕЛИРОВАНИЕ / 01</div>
-            <h1>{editing ? "Соберите свою сеть" : "Город в движении"}</h1>
-            <p>
-              {editing
-                ? "Топология, спрос и физика — в одном сценарии."
-                : "Как меняется ожидание, когда меняется расписание."}
-            </p>
+            <h1>{editing ? "Конструктор" : "Симуляция"}</h1>
           </div>
           <div className="file-actions">
             <button onClick={() => upload.current?.click()}>
@@ -394,17 +571,7 @@ export default function App() {
             <button onClick={() => download("metro-network.json", n)}>
               ↓ Сохранить
             </button>
-            {editing && (
-              <button
-                onClick={() => {
-                  reset(emptyNetwork());
-                  setEditing(true);
-                  setTool("station");
-                }}
-              >
-                Новая сеть
-              </button>
-            )}
+            {editing && <button onClick={createNetwork}>Новая сеть</button>}
           </div>
         </section>
         <input
@@ -438,6 +605,10 @@ export default function App() {
               disabled={inProgress}
               onChange={async (e) => {
                 const id = e.target.value;
+                if (!id) {
+                  createNetwork();
+                  return;
+                }
                 setBusy("load");
                 try {
                   reset(await api(`/networks/${id}`), id);
@@ -471,7 +642,10 @@ export default function App() {
           <button
             className="primary"
             disabled={!!busy || invalid || inProgress}
-            onClick={() => simulate(n)}
+            onClick={() => {
+              setEditing(false);
+              simulate(n);
+            }}
           >
             {busy === "simulate" ? "Расчёт…" : "▶ Запустить симуляцию"}
           </button>
@@ -487,9 +661,16 @@ export default function App() {
             {error}
           </div>
         )}
-        {notice && (
+        {notice && !resultsStale && (
           <div className="message" role="status">
             {notice}
+          </div>
+        )}
+        {resultsStale && (
+          <div className="message" role="status">
+            Настройки изменены. Карта, таблицы и итоговые показатели пока
+            относятся к предыдущему прогону. Нажмите «Запустить симуляцию»,
+            чтобы пересчитать.
           </div>
         )}
         <div className="dashboard">
@@ -497,17 +678,16 @@ export default function App() {
             <section className="map-panel panel">
               <div className="section-heading">
                 <div>
-                  <span className="eyebrow">
-                    {editing ? "КОНСТРУКТОР" : "СХЕМА ДВИЖЕНИЯ"}
-                  </span>
                   <h2>{editing ? "Станции и связи" : "Сеть метро"}</h2>
                 </div>
                 {editing ? (
                   <div className="tool-switch">
                     {[
+                      ["select", "Выбрать"],
                       ["station", "Станции"],
                       ["line", "Ветка"],
                       ["transfer", "Переход"],
+                      ["delete", "Удалить"],
                     ].map(([key, label]) => (
                       <button
                         key={key}
@@ -520,6 +700,14 @@ export default function App() {
                         {label}
                       </button>
                     ))}
+                    <button
+                      disabled={!undoDepth || !!busy || !!inProgress}
+                      onClick={undo}
+                      title="Ctrl+Z"
+                      aria-label="Отменить последнее изменение"
+                    >
+                      ↶ Отменить
+                    </button>
                   </div>
                 ) : (
                   <label className="heat-select">
@@ -546,6 +734,9 @@ export default function App() {
                 editing={editing}
                 tool={tool}
                 onMapClick={mapClick}
+                onConnectionDelete={deleteConnection}
+                onConnectionSelect={selectConnection}
+                selectedConnection={selectedConnection}
                 selected={selected}
                 heat={heat}
               />
@@ -573,7 +764,12 @@ export default function App() {
                   >
                     {playing ? "Ⅱ" : "▶"}
                   </button>
-                  <b className="clock">{clock(time)}</b>
+                  <b className="clock">
+                    {clock(time, false)}
+                    {dayLabel(time) && (
+                      <small className="clock-day">{dayLabel(time)}</small>
+                    )}
+                  </b>
                   <input
                     aria-label="Время симуляции"
                     type="range"
@@ -613,322 +809,422 @@ export default function App() {
                 </div>
               )}
             </section>
-            <section className="metric-grid" aria-label="Показатели симуляции">
-              {[
-                [
-                  "Среднее ожидание",
-                  metrics ? `${fmt(metrics.W, 1)} с` : "—",
-                  result
-                    ? `исходное ${fmt(result.baseline.metrics.W, 1)} с`
-                    : "на пассажира",
-                ],
-                [
-                  "Перевезено",
-                  metrics ? fmt(metrics.transported) : "—",
-                  metrics
-                    ? `не доехало ${fmt(metrics.unfinished)}`
-                    : "завершили маршрут",
-                ],
-                [
-                  "Загрузка поездов",
-                  metrics ? `${fmt(metrics.LF * 100, 1)}%` : "—",
-                  "по проходам перегонов",
-                ],
-                [
-                  "Ожидают",
-                  metrics ? fmt(waiting ?? 0) : "—",
-                  "в выбранный момент",
-                ],
-                [
-                  "Использовано поездов",
-                  metrics
-                    ? `${fmt(metrics.used_trains)} / ${value(n.fleet)}`
-                    : "—",
-                  metrics
-                    ? `выпуск +${fmt(metrics.release_delay_s, 1)} с`
-                    : "за весь прогон",
-                ],
-              ].map(([label, val, note]) => (
-                <article className="metric panel" key={label}>
-                  <span>{label}</span>
-                  <b>{val}</b>
-                  <small>{note}</small>
-                </article>
-              ))}
-            </section>
-            <section className="panel schedule-panel">
-              <div className="section-heading">
-                <div>
-                  <span className="eyebrow">ИНТЕРВАЛЫ И ПАРК</span>
-                  <h2>Расписание</h2>
+            <div className="mode-panels" hidden={!editing}>
+              <DemandEditor
+                key={`${demo}:${n.meta.name}`}
+                network={n}
+                update={update}
+                disabled={!!busy || !!inProgress}
+              />
+            </div>
+            <div className="mode-panels" hidden={editing}>
+              <section
+                className="metric-grid"
+                aria-label="Показатели симуляции"
+              >
+                {[
+                  [
+                    "Среднее ожидание",
+                    metrics ? `${fmt(metrics.W, 1)} с` : "—",
+                    result
+                      ? `исходное ${fmt(result.baseline.metrics.W, 1)} с`
+                      : "за весь прогон, включая пересадки",
+                  ],
+                  [
+                    "Перевезено",
+                    metrics ? fmt(metrics.transported) : "—",
+                    metrics
+                      ? `не доехало ${fmt(metrics.unfinished)}`
+                      : "завершили маршрут",
+                  ],
+                  [
+                    "Загрузка поездов",
+                    metrics ? `${fmt(metrics.LF * 100, 1)}%` : "—",
+                    "средняя занятость мест за прогон",
+                  ],
+                  [
+                    "Ожидают",
+                    metrics ? fmt(waiting ?? 0) : "—",
+                    "в выбранный момент",
+                  ],
+                  [
+                    "Использовано поездов",
+                    metrics
+                      ? `${fmt(metrics.used_trains)} / ${value(n.fleet)}`
+                      : "—",
+                    metrics
+                      ? `среднее опоздание выпуска: ${fmt(metrics.release_delay_s, 1)} с`
+                      : "за весь прогон",
+                  ],
+                ].map(([label, val, note]) => (
+                  <article className="metric panel" key={label}>
+                    <span>{label}</span>
+                    <b>{val}</b>
+                    <small>{note}</small>
+                  </article>
+                ))}
+              </section>
+              {!editing && trajectory && (
+                <LiveTables
+                  network={n}
+                  trajectory={trajectory}
+                  time={time}
+                  playing={playing}
+                  onTogglePlayback={() => setPlaying(!playing)}
+                />
+              )}
+              <DailyTimeline
+                network={n}
+                trajectory={resultsStale ? null : trajectory}
+                time={time}
+                onTime={(t) => {
+                  setPlaying(false);
+                  setClock(t);
+                }}
+              />
+              <section className="panel schedule-panel">
+                <div className="section-heading">
+                  <div>
+                    <h2>Расписание</h2>
+                  </div>
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      checked={locked}
+                      onChange={(e) => setLocked(e.target.checked)}
+                    />
+                    Закрепить парк
+                  </label>
                 </div>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={locked}
-                    onChange={(e) => setLocked(e.target.checked)}
-                  />
-                  Закрепить парк
-                </label>
-              </div>
-              <div className="schedule-tools">
-                <label>
-                  Период
-                  <select
-                    aria-label="Период расписания"
-                    value={period}
-                    onChange={(e) => setPeriod(Number(e.target.value))}
+                <p className="section-description">
+                  Интервал — время между выпусками поездов в каждом направлении.
+                  Назначенный парк — общее число составов ветки на оба
+                  направления. После изменения нажмите «Запустить симуляцию».
+                </p>
+                <div className="schedule-tools">
+                  <label>
+                    Период
+                    <select
+                      aria-label="Период расписания"
+                      value={period}
+                      onChange={(e) => {
+                        setPeriod(Number(e.target.value));
+                        setTrainResult(null);
+                      }}
+                    >
+                      {Array.from(
+                        { length: Math.max(1, periods(n)) },
+                        (_, i) => (
+                          <option key={i} value={i}>
+                            {clock(
+                              setting(n, "day_start_s") +
+                                i * value(n.schedule?.period_len_min, 60) * 60,
+                            )}
+                            –
+                            {clock(
+                              Math.min(
+                                setting(n, "day_end_s"),
+                                setting(n, "day_start_s") +
+                                  (i + 1) *
+                                    value(n.schedule?.period_len_min, 60) *
+                                    60,
+                              ),
+                            )}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                  <button
+                    className="text-button"
+                    onClick={() => setShowAll(!showAll)}
                   >
-                    {Array.from({ length: Math.max(1, periods(n)) }, (_, i) => (
-                      <option key={i} value={i}>
-                        {clock(
-                          setting(n, "day_start_s") +
-                            i * value(n.schedule?.period_len_min, 60) * 60,
-                        )}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  className="text-button"
-                  onClick={() => setShowAll(!showAll)}
-                >
-                  {showAll ? "Один период" : "Все периоды"}
-                </button>
-                <span>
-                  Интервал, с · оба направления
-                  <Badge raw={n.schedule} />
-                </span>
-              </div>
-              <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Линия</th>
-                      {(showAll
-                        ? Array.from({ length: periods(n) }, (_, i) => i)
-                        : [period]
-                      ).map((p) => (
-                        <th key={p}>
-                          {clock(
-                            setting(n, "day_start_s") +
-                              p * value(n.schedule?.period_len_min, 60) * 60,
-                          )}
-                        </th>
-                      ))}
-                      <th>Парк</th>
-                      <th>Формула / прогон</th>
-                      <th>Факт. интервал</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {n.lines.map((l) => (
-                      <tr key={l.id}>
-                        <td>
-                          <i
-                            className="line-dot"
-                            style={{ background: l.color }}
-                          />
-                          {l.name}
-                        </td>
+                    {showAll ? "Один период" : "Все периоды"}
+                  </button>
+                  <span>Все интервалы — в секундах</span>
+                </div>
+                <div className="table-scroll">
+                  <table aria-label="Интервалы и парк по веткам">
+                    <thead>
+                      <tr>
+                        <th>Линия</th>
                         {(showAll
                           ? Array.from({ length: periods(n) }, (_, i) => i)
                           : [period]
                         ).map((p) => (
-                          <td key={p}>
+                          <th key={p}>
+                            {clock(
+                              setting(n, "day_start_s") +
+                                p * value(n.schedule?.period_len_min, 60) * 60,
+                            )}
+                            <small className="column-unit">
+                              Интервал, секунд
+                            </small>
+                          </th>
+                        ))}
+                        <th>
+                          Назначено поездов
+                          <small className="column-unit">
+                            На оба направления
+                          </small>
+                        </th>
+                        <th>
+                          Поездов в выбранном периоде
+                          <small className="column-unit">
+                            Оценка / реально работало
+                          </small>
+                        </th>
+                        <th>
+                          Фактический интервал
+                          <small className="column-unit">
+                            Между выпусками из депо
+                          </small>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {n.lines.map((l) => (
+                        <tr key={l.id}>
+                          <td>
+                            <i
+                              className="line-dot"
+                              style={{ background: l.color }}
+                            />
+                            {l.name}
+                          </td>
+                          {(showAll
+                            ? Array.from({ length: periods(n) }, (_, i) => i)
+                            : [period]
+                          ).map((p) => (
+                            <td key={p}>
+                              <div className="input-unit">
+                                <input
+                                  aria-label={`Интервал ${l.name} период ${p + 1}`}
+                                  type="number"
+                                  min="1"
+                                  step="15"
+                                  value={value(hw[l.id][p], 180)}
+                                  onChange={(e) =>
+                                    update((d) => {
+                                      const h = headways(d);
+                                      h[l.id][p] = tagged(
+                                        Number(e.target.value),
+                                      );
+                                      d.schedule = {
+                                        period_len_min:
+                                          d.schedule?.period_len_min ?? 60,
+                                        headways: h,
+                                      };
+                                    })
+                                  }
+                                />
+                                <span>с</span>
+                              </div>
+                              <small className="value-context">
+                                {durationText(value(hw[l.id][p], 180))}
+                              </small>
+                              <Badge raw={n.schedule?.headways?.[l.id]?.[p]} />
+                            </td>
+                          ))}
+                          <td>
                             <input
-                              aria-label={`Интервал ${l.name} период ${p + 1}`}
+                              aria-label={`Парк ${l.name}`}
                               type="number"
-                              min="1"
-                              step="15"
-                              value={value(hw[l.id][p], 180)}
+                              min="0"
+                              max={value(n.fleet)}
+                              value={value(allocation[l.id])}
                               onChange={(e) =>
                                 update((d) => {
-                                  const h = headways(d);
-                                  h[l.id][p] = tagged(Number(e.target.value));
-                                  d.schedule = {
-                                    period_len_min:
-                                      d.schedule?.period_len_min ?? 60,
-                                    headways: h,
-                                  };
+                                  d.fleet_assignment = Object.fromEntries(
+                                    d.lines.map((l) => [
+                                      l.id,
+                                      value(allocation[l.id]),
+                                    ]),
+                                  );
+                                  d.fleet_assignment![l.id] = Number(
+                                    e.target.value,
+                                  );
                                 })
                               }
                             />
-                            <Badge raw={n.schedule?.headways?.[l.id]?.[p]} />
+                            <Badge
+                              raw={n.fleet_assignment?.[l.id]}
+                              automatic={!n.fleet_assignment}
+                            />
                           </td>
-                        ))}
-                        <td>
-                          <input
-                            aria-label={`Парк ${l.name}`}
-                            type="number"
-                            min="0"
-                            max={value(n.fleet)}
-                            value={value(allocation[l.id])}
-                            onChange={(e) =>
-                              update((d) => {
-                                d.fleet_assignment = Object.fromEntries(
-                                  d.lines.map((l) => [
-                                    l.id,
-                                    value(allocation[l.id]),
-                                  ]),
-                                );
-                                d.fleet_assignment![l.id] = Number(
-                                  e.target.value,
-                                );
-                              })
-                            }
-                          />
-                          <Badge raw={n.fleet_assignment} />
-                        </td>
-                        <td>
-                          {metrics?.line_periods?.find(
-                            (r: any) => r.line === l.id && r.period === period,
-                          )?.formula_trains ?? "—"}{" "}
-                          /{" "}
-                          {metrics?.line_periods?.find(
-                            (r: any) => r.line === l.id && r.period === period,
-                          )?.used_trains ?? "—"}
-                        </td>
-                        <td>
-                          {metrics?.actual_headways
-                            ?.filter(
+                          <td>
+                            {metrics?.line_periods?.find(
                               (r: any) =>
                                 r.line === l.id && r.period === period,
-                            )
-                            .map(
+                            )?.formula_trains ?? "—"}{" "}
+                            /{" "}
+                            {metrics?.line_periods?.find(
                               (r: any) =>
-                                `${r.direction === 1 ? "→" : "←"} ${r.headway_s ? fmt(r.headway_s, 1) : "—"} с`,
-                            )
-                            .join(" · ") ?? "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="count-controls">
-                <select
-                  aria-label="Ветка для расчёта"
-                  value={activeLine}
-                  onChange={(e) => setActiveLine(e.target.value)}
-                >
-                  {n.lines.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Режим расчёта поездов"
-                  value={countMode}
-                  onChange={(e) => {
-                    setCountMode(e.target.value);
-                    setCountValue(e.target.value === "by_headway" ? 180 : 8);
-                  }}
-                >
-                  <option value="by_headway">По интервалу, с</option>
-                  <option value="by_fleet">По парку, поездов</option>
-                </select>
-                <input
-                  aria-label="Значение для расчёта поездов"
-                  type="number"
-                  min="1"
-                  value={countValue}
-                  onChange={(e) => setCountValue(Number(e.target.value))}
-                />
-                <button disabled={!!busy || invalid} onClick={calculate}>
-                  {busy === "count"
-                    ? "Проверяем…"
-                    : "Рассчитать количество поездов"}
-                </button>
-              </div>
-              {trainResult && (
-                <div className="count-result">
-                  <strong>
-                    Формула: {trainResult.formula_trains ?? "—"} · Симуляция:{" "}
-                    {trainResult.simulation
-                      ? `${trainResult.simulation.trains} поездов, ${trainResult.simulation.headway_s} с`
-                      : "не найдено в диапазоне"}
-                  </strong>
-                  <p>{trainResult.explanation}</p>
-                  <small>
-                    Проверено: {trainResult.checked.length} · seed:{" "}
-                    {trainResult.seeds.join(", ")}
-                  </small>
+                                r.line === l.id && r.period === period,
+                            )?.used_trains ?? "—"}
+                          </td>
+                          <td>
+                            {metrics?.actual_headways
+                              ?.filter(
+                                (r: any) =>
+                                  r.line === l.id && r.period === period,
+                              )
+                              .map((r: any) => (
+                                <div
+                                  className="actual-headway"
+                                  key={r.direction}
+                                >
+                                  <span>
+                                    {directionText(n, l.id, r.direction)}
+                                  </span>
+                                  <b>
+                                    {r.headway_s == null
+                                      ? "Меньше двух выпусков"
+                                      : durationText(r.headway_s)}
+                                  </b>
+                                </div>
+                              )) ?? "Запустите симуляцию"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </section>
-            <section className="panel optimization">
-              <div className="section-heading">
-                <div>
-                  <span className="eyebrow">ДВА КРИТЕРИЯ / NSGA-II</span>
-                  <h2>Найти свой баланс</h2>
-                </div>
-                <button
-                  className="primary"
-                  disabled={invalid || !!busy || inProgress}
-                  onClick={optimize}
-                >
-                  Оптимизировать
-                </button>
-              </div>
-              <p className="section-description">
-                Меньше ожидания на платформах. Меньше пустых мест в поездах.
-                <br />
-                Один фронт решений — четыре точки зрения.
-              </p>
-              {inProgress && (
-                <div className="job-progress">
-                  <progress max="1" value={job.progress} />
-                  <span>
-                    {Math.round(job.progress * 100)}% ·{" "}
-                    {job.status === "queued" ? "В очереди" : "Поиск расписания"}
-                  </span>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const status = await api(
-                          `/jobs/${job.job_id}/cancel`,
-                          {},
+                <div className="count-controls">
+                  <label>
+                    Ветка
+                    <select
+                      aria-label="Ветка для расчёта"
+                      value={activeLine}
+                      onChange={(e) => {
+                        setActiveLine(e.target.value);
+                        setTrainResult(null);
+                      }}
+                    >
+                      {n.lines.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Что подобрать
+                    <select
+                      aria-label="Режим расчёта поездов"
+                      value={countMode}
+                      onChange={(e) => {
+                        setCountMode(e.target.value);
+                        setCountValue(
+                          e.target.value === "by_headway" ? 180 : 8,
                         );
-                        setJob({ ...job, ...status });
-                      } catch (e: any) {
-                        setError(e.message);
-                      }
-                    }}
-                  >
-                    Отмена
+                        setTrainResult(null);
+                      }}
+                    >
+                      <option value="by_headway">
+                        Число поездов по интервалу
+                      </option>
+                      <option value="by_fleet">
+                        Интервал для заданного парка
+                      </option>
+                    </select>
+                  </label>
+                  <label>
+                    {countMode === "by_headway"
+                      ? "Интервал, секунд"
+                      : "Число поездов"}
+                    <input
+                      aria-label="Значение для расчёта поездов"
+                      type="number"
+                      min="1"
+                      value={countValue}
+                      onChange={(e) => {
+                        setCountValue(Number(e.target.value));
+                        setTrainResult(null);
+                      }}
+                    />
+                  </label>
+                  <button disabled={!!busy || invalid} onClick={calculate}>
+                    {busy === "count"
+                      ? "Проверяем…"
+                      : "Рассчитать количество поездов"}
                   </button>
                 </div>
-              )}
-              {job?.status === "cancelled" && (
-                <p className="section-description">Поиск отменён.</p>
-              )}
-              {result && (
-                <Options
-                  result={result}
-                  onApply={(o) => {
-                    const d = structuredClone(jobNetwork.current ?? n);
-                    d.schedule = {
-                      period_len_min: d.schedule?.period_len_min ?? 60,
-                      headways: o.headways,
-                    };
-                    d.fleet_assignment = o.fleet_assignment;
-                    version.current++;
-                    setNetwork(d);
-                    setEditing(false);
-                    simulate(d, version.current);
-                  }}
-                />
-              )}
-              {!result && !inProgress && (
-                <div className="optimization-empty">
-                  <span>А — пассажиры</span>
-                  <div className="tradeoff-line" />
-                  <span>Б — ресурсы</span>
+                {trainResult && (
+                  <CountResult result={trainResult} network={n} />
+                )}
+              </section>
+              <section className="panel optimization">
+                <div className="section-heading">
+                  <div>
+                    <h2>Оптимизация</h2>
+                  </div>
+                  <button
+                    className="primary"
+                    disabled={invalid || !!busy || inProgress}
+                    onClick={optimize}
+                  >
+                    Оптимизировать
+                  </button>
                 </div>
-              )}
-            </section>
+                <p className="section-description">
+                  Расчёт не изменяет расписание, пока вы не выберете «Запустить
+                  вариант».
+                </p>
+                {inProgress && (
+                  <div className="job-progress">
+                    <progress max="1" value={job.progress} />
+                    <span>
+                      {Math.round(job.progress * 100)}% ·{" "}
+                      {job.status === "queued"
+                        ? "В очереди"
+                        : "Поиск расписания"}
+                    </span>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const status = await api(
+                            `/jobs/${job.job_id}/cancel`,
+                            {},
+                          );
+                          setJob({ ...job, ...status });
+                        } catch (e: any) {
+                          setError(e.message);
+                        }
+                      }}
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                )}
+                {job?.status === "cancelled" && (
+                  <p className="section-description">Поиск отменён.</p>
+                )}
+                {result && (
+                  <Options
+                    result={result}
+                    network={jobNetwork.current ?? n}
+                    onApply={(o) => {
+                      const d = structuredClone(jobNetwork.current ?? n);
+                      d.schedule = {
+                        period_len_min: d.schedule?.period_len_min ?? 60,
+                        headways: o.headways,
+                      };
+                      d.fleet_assignment = o.fleet_assignment;
+                      version.current++;
+                      history.current = [];
+                      setUndoDepth(0);
+                      setNetwork(d);
+                      setSelected(null);
+                      setSelectedConnection(null);
+                      setTrainResult(null);
+                      setEditing(false);
+                      simulate(d, version.current);
+                    }}
+                  />
+                )}
+              </section>
+            </div>
           </div>
           <Controls
             n={n}
@@ -940,13 +1236,11 @@ export default function App() {
             report={report}
             onCsv={() => csv.current?.click()}
             addSegment={addSegment}
+            onStationDelete={deleteStation}
+            onConnectionDelete={deleteConnection}
           />
         </div>
         <footer>
-          METRO LAB{" "}
-          <span>
-            Дискретные события · общий seed · воспроизводимые эксперименты
-          </span>
           <a
             href={
               import.meta.env.VITE_API_DOCS_URL ?? "http://127.0.0.1:8000/docs"
